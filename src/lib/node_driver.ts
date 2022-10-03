@@ -1,4 +1,6 @@
 import repl from 'repl';
+import fs from 'fs';
+import { setTimeout } from 'timers/promises'
 import { parseScript as parseJavaScript } from 'esprima';
 import childProcess from 'child_process';
 import cdp from 'chrome-remote-interface';
@@ -7,35 +9,47 @@ import HeapSnapshotParser from '../lib/heap_snapshot_parser';
 import { Log, IDriver } from '../common/interfaces';
 import { wait } from '../common/util';
 
-function runUserProcess(absPath: string): childProcess.ChildProcess {
-  let node: childProcess.ChildProcess;
-  let nodeRemoteDebugger: cdp.Client;
+interface ChildProcessResponse {
+  _process: childProcess.ChildProcess,
+  _debugger: cdp.Client // chrome debugger protocol client, ref: https://chromedevtools.github.io/devtools-protocol/1-2/
+}
 
-  try {
-    const node = childProcess.spawn('node', ['--inspect', absPath]);
+async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
+  return new Promise(function (resolve, reject) {
+    let _process: childProcess.ChildProcess;
+    let _debugger: cdp.Client;
 
-    // attach events
-    node.on('spawn', async (msg: any) => {
-      // spawn successfully
-      console.log(`PID[${node.pid}] spawned, will create connect websocket using chrome-remote-interface, msg:${msg}`);
-      nodeRemoteDebugger = await cdp({ port: 9229 });
-    })
-    node.on('message', (msg) => {
-      console.log('PARENT got message:', msg);
-    });
-    node.stdout.on('data', (data) => {
-      console.log(`PID[${node.pid}] stdout: ${data}`);
-    });
-    node.on('close', (code) => {
-      console.log(`PID[${node.pid}] child process close all stdio with code ${code}`);
-    });
-    node.on('exit', (code) => {
-      console.log(`PID[${node.pid}] child process exited with code ${code}`);
-    });
-  } catch (error) {
-    console.error("failed to spawn another NodeJS child process");
-  }
-  return node;
+    try {
+      _process = childProcess.spawn('node', ['--inspect', absPath]);
+
+      // attach events
+      _process.on('spawn', async () => {
+        // spawn successfully
+        console.log(`PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`);
+        _debugger = await cdp({ port: 9229 }); // node's default degging port
+
+        resolve({
+          _process: _process,
+          _debugger: _debugger,
+        });
+      })
+      _process.on('message', (msg) => {
+        console.log('PARENT got message:', msg);
+      });
+      _process.stdout.on('data', (data) => {
+        console.log(`PID[${_process.pid}] stdout: ${data}`);
+      });
+      _process.on('close', (code) => {
+        console.log(`PID[${_process.pid}] child process close all stdio with code ${code}`);
+      });
+      _process.on('exit', (code) => {
+        console.log(`PID[${_process.pid}] child process exited with code ${code}`);
+      });
+    } catch (error) {
+      console.error("failed to spawn another NodeJS child process");
+      reject(error);
+    }
+  });
 }
 
 export default class NodeDriver implements IDriver {
@@ -45,13 +59,14 @@ export default class NodeDriver implements IDriver {
     quiet: boolean = true,
   ): Promise<NodeDriver> {
     // TODO: change hardcoded path to be passed from method params
-    const path = "/Users/chenxizh/workspace/practium/NLeak/test/example/test_user_app.js";
-    const nodeProcess = runUserProcess(path);
+    const path = "/Users/chenxizh/workspace/practium/leakscope/test/example/sample_app.js";
+    const { _process, _debugger } = await runUserProcess(path);
 
     const driver = new NodeDriver(
       log,
       interceptPaths,
-      nodeProcess,
+      _process,
+      _debugger,
     );
 
     return driver;
@@ -61,21 +76,20 @@ export default class NodeDriver implements IDriver {
   private _interceptPaths: string[];
   private _quiet: boolean;
   private _process: childProcess.ChildProcess;
+  private _debugger: cdp.Client;
   private _shutdown: boolean;
 
   private constructor(
     log: Log,
     interceptPaths: string[],
-    nodeProcess: childProcess.ChildProcess,
+    _process: childProcess.ChildProcess,
+    _debugger: cdp.Client,
   ) {
     this._log = log;
     this._interceptPaths = interceptPaths;
-    this._process = nodeProcess;
+    this._process = _process;
+    this._debugger = _debugger;
     this._shutdown = false;
-
-    log.log("[DEBUG] in constructor, need use:");
-    log.log(this._process + "");
-    log.log(this._shutdown + "");
   }
 
   // dummy API
@@ -112,11 +126,26 @@ export default class NodeDriver implements IDriver {
     return new Promise<T>(() => {});
   }
 
-  public takeHeapSnapshot(): HeapSnapshotParser {
+  public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {
     console.log("in takeHeapSnapshot");
     const parser = new HeapSnapshotParser();
 
-    // this._process.send({ action: 'takeSnapShot' })
+    await this._debugger.Profiler.enable();
+    await this._debugger.Profiler.start();
+    await setTimeout(600);
+    const data = await this._debugger.Profiler.stop();
+    fs.writeFileSync('data.cpuprofile', JSON.stringify(data.profile));
+    console.log("finished profiling")
+
+    // 200 KB chunks
+    // this._debugger.HeapProfiler.addHeapSnapshotChunk = (evt) => {
+    //   parser.addSnapshotChunk(evt.chunk);
+    // };
+    // Always take a DOM snapshot before taking a real snapshot.
+    // this._takeDOMSnapshot().then(() => {
+    //   this._heapProfiler.takeHeapSnapshot({ reportProgress: false });
+    // });
+
     // TODO: take & add snapshot
     // parser.addSnapshotChunk(evt.chunk);
 

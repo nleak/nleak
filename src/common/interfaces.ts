@@ -11,7 +11,7 @@ export interface IDriver {
   relaunch(): Promise<IDriver>;
   navigateTo(url: string): Promise<any>;
   runCode<T>(expression: string): Promise<T>;
-  takeHeapSnapshot(): HeapSnapshotParser;
+  takeHeapSnapshot(): Promise<HeapSnapshotParser>;
   debugLoop(): Promise<void>;
   shutdown(): Promise<void>;
 }

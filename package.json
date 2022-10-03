@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon",
-    "start:driver": "npx tsc && node ./build/cli/nleak.js run --config ./test/example/config.js --out ./test/example",
+    "test:driver": "npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

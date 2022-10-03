@@ -88,7 +88,7 @@ const Run: CommandModule = {
       );
 
       // Test driver snippet, need to removed
-      nodeDriver.takeHeapSnapshot();
+      await nodeDriver.takeHeapSnapshot();
 
       // belows start the BLeak FindLeaks logic
       // let i = 0;
