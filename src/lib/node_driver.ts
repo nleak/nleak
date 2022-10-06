@@ -129,25 +129,18 @@ export default class NodeDriver implements IDriver {
   public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {
     console.log("in takeHeapSnapshot");
     const parser = new HeapSnapshotParser();
-
-    await this._debugger.Profiler.enable();
-    await this._debugger.Profiler.start();
-    await setTimeout(600);
-    const data = await this._debugger.Profiler.stop();
-    fs.writeFileSync('data.cpuprofile', JSON.stringify(data.profile));
-    console.log("finished profiling")
+    let count = 1;
 
     // 200 KB chunks
-    // this._debugger.HeapProfiler.addHeapSnapshotChunk = (evt) => {
-    //   parser.addSnapshotChunk(evt.chunk);
-    // };
-    // Always take a DOM snapshot before taking a real snapshot.
-    // this._takeDOMSnapshot().then(() => {
-    //   this._heapProfiler.takeHeapSnapshot({ reportProgress: false });
-    // });
+    this._debugger.HeapProfiler.on("addHeapSnapshotChunk", (evt) => {
+      fs.writeFileSync('data.heap', JSON.stringify(evt.chunk));
+      console.log(`add No.${count} 200KB chunk`);
+      count++;
+      parser.addSnapshotChunk(evt.chunk);
+    });
 
-    // TODO: take & add snapshot
-    // parser.addSnapshotChunk(evt.chunk);
+    // taking a real snapshot.
+    await this._debugger.HeapProfiler.takeHeapSnapshot({ reportProgress: false });
 
     return parser;
   }
