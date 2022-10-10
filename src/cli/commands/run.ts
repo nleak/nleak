@@ -7,9 +7,9 @@ import {
 import { join } from "path";
 import { CommandModule } from "yargs";
 
-import ProgressProgressBar from "../../lib/progress_progress_bar";
+import ProgressProgressBar from "../../lib/progress_bar";
 import { IDriver } from "../../common/interfaces";
-import BLeakResults from "../../lib/bleak_results";
+import BLeakResults from "../../lib/results";
 import NodeDriver from "../../lib/node_driver";
 
 // import BLeak from "../../lib/bleak";
