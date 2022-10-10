@@ -1,4 +1,4 @@
-import {HeapSnapshotContents} from '../common/interfaces';
+import { HeapSnapshotContents } from "../common/interfaces";
 
 const enum ParserState {
   // The parser has encountered an error and can no longer proceed.
@@ -12,14 +12,14 @@ const enum ParserState {
   // Waiting for more strings in an array property.
   STRING_ARRAY,
   // Waiting for end of snapshot.
-  END
+  END,
 }
 
 export const enum DataTypes {
   SNAPSHOT = 1,
   NODES = 2,
   EDGES = 3,
-  STRINGS = 4
+  STRINGS = 4,
 }
 
 type ParserEvent = SnapshotEvent | NumbersEvent | StringsEvent;
@@ -41,9 +41,7 @@ interface StringsEvent {
 
 const SNAPSHOT_PROP_NAME = `{"snapshot":`;
 
-function onSnapshotChunk() {
-
-}
+function onSnapshotChunk() {}
 
 /**
  * Streaming parser for heap snapshots.
@@ -79,10 +77,14 @@ export default class HeapSnapshotParser {
   private _error: Error = null;
   private _activeProperty: string = null;
   private _pendingEvents: ParserEvent[] = [];
-  private _pendingReads: { resolve: (e: ParserEvent) => void, reject: (e: Error) => void }[] = [];
+  private _pendingReads: {
+    resolve: (e: ParserEvent) => void;
+    reject: (e: Error) => void;
+  }[] = [];
   private _buffer: string = "";
 
-  private _onSnapshotChunk: (chunk: string, end: boolean) => void = onSnapshotChunk;
+  private _onSnapshotChunk: (chunk: string, end: boolean) => void =
+    onSnapshotChunk;
   public set onSnapshotChunk(v: (chunk: string, end: boolean) => void) {
     this._onSnapshotChunk = v;
   }
@@ -102,14 +104,18 @@ export default class HeapSnapshotParser {
     const chunkLen = chunk.length;
     let chunkPosition = 0;
 
-    outerLoop:
-    while (!this.hasErrored() && chunkPosition < chunkLen) {
+    outerLoop: while (!this.hasErrored() && chunkPosition < chunkLen) {
       switch (this._state) {
         case ParserState.SNAPSHOT_LINE: {
           // Expecting: {"snapshot":{[object here]},\n
-          const beginString = chunk.slice(chunkPosition, chunkPosition + SNAPSHOT_PROP_NAME.length);
+          const beginString = chunk.slice(
+            chunkPosition,
+            chunkPosition + SNAPSHOT_PROP_NAME.length
+          );
           if (beginString !== SNAPSHOT_PROP_NAME) {
-            this._raiseError(new Error(`Unable to find "snapshot" property in first chunk.`));
+            this._raiseError(
+              new Error(`Unable to find "snapshot" property in first chunk.`)
+            );
             break outerLoop;
           }
           chunkPosition += SNAPSHOT_PROP_NAME.length;
@@ -125,15 +131,21 @@ export default class HeapSnapshotParser {
             }
           }
           if (endingIndex === -1) {
-            this._raiseError(new Error(`Unable to find whole "snapshot" object in first snapshot chunk.`));
+            this._raiseError(
+              new Error(
+                `Unable to find whole "snapshot" object in first snapshot chunk.`
+              )
+            );
             break outerLoop;
           }
 
           try {
-            const snapshot: HeapSnapshotContents = JSON.parse(chunk.slice(startIndex, endingIndex));
+            const snapshot: HeapSnapshotContents = JSON.parse(
+              chunk.slice(startIndex, endingIndex)
+            );
             this._pendingEvents.push({
               type: DataTypes.SNAPSHOT,
-              data: snapshot
+              data: snapshot,
             });
             this._state = ParserState.ARRAY_PROPERTY_BEGIN;
           } catch (e) {
@@ -144,12 +156,18 @@ export default class HeapSnapshotParser {
         }
         case ParserState.ARRAY_PROPERTY_BEGIN: {
           const start = chunkPosition;
-          for (; chunkPosition < chunk.length && chunk[chunkPosition] !== "["; chunkPosition++) {
+          for (
+            ;
+            chunkPosition < chunk.length && chunk[chunkPosition] !== "[";
+            chunkPosition++
+          ) {
             // Wait.
           }
 
           if (chunkPosition >= chunk.length) {
-            this._raiseError(new Error(`Unable to locate the beginning of a property.`));
+            this._raiseError(
+              new Error(`Unable to locate the beginning of a property.`)
+            );
             break outerLoop;
           }
           // Skip over "[".
@@ -168,8 +186,7 @@ export default class HeapSnapshotParser {
         case ParserState.NUMBER_ARRAY: {
           const start = chunkPosition;
           let lastNewline = start;
-          numberForLoop:
-          for (; chunkPosition < chunkLen; chunkPosition++) {
+          numberForLoop: for (; chunkPosition < chunkLen; chunkPosition++) {
             switch (chunk[chunkPosition]) {
               case "]":
                 // End of array.
@@ -188,19 +205,22 @@ export default class HeapSnapshotParser {
           const end = arrayEnded ? chunkPosition : lastNewline;
           if (start !== end) {
             const beginningComma = chunk[start] === ",";
-            const numberChunk = chunk.slice(beginningComma ? start + 1 : start, end);
+            const numberChunk = chunk.slice(
+              beginningComma ? start + 1 : start,
+              end
+            );
             const numbers: number[] = JSON.parse(`[${numberChunk}]`);
             switch (this._activeProperty) {
               case "nodes":
                 this._pendingEvents.push({
                   type: DataTypes.NODES,
-                  data: numbers
+                  data: numbers,
                 });
                 break;
               case "edges":
                 this._pendingEvents.push({
                   type: DataTypes.EDGES,
-                  data: numbers
+                  data: numbers,
                 });
                 break;
             }
@@ -219,7 +239,11 @@ export default class HeapSnapshotParser {
                 this._state = ParserState.END;
                 break;
               default:
-                this._raiseError(new Error(`Unrecognized end-of-array character: ${chunk[chunkPosition]}`));
+                this._raiseError(
+                  new Error(
+                    `Unrecognized end-of-array character: ${chunk[chunkPosition]}`
+                  )
+                );
                 break;
             }
             break;
@@ -235,8 +259,7 @@ export default class HeapSnapshotParser {
           let lastStringEnding = start;
           let isInString = false;
           // Look for unescaped "]", which ends the array.
-          stringWhile:
-          while (chunkPosition < chunkLen) {
+          stringWhile: while (chunkPosition < chunkLen) {
             switch (chunk[chunkPosition]) {
               case '"':
                 if (!escaped) {
@@ -247,13 +270,13 @@ export default class HeapSnapshotParser {
                 }
                 escaped = false;
                 break;
-              case ']':
+              case "]":
                 if (!isInString) {
                   break stringWhile;
                 }
                 escaped = false;
                 break;
-              case '\\':
+              case "\\":
                 // Flip, for sequences of "\" (e.g. an actual \ character)
                 escaped = !escaped;
                 break;
@@ -272,11 +295,14 @@ export default class HeapSnapshotParser {
           const end = arrayEnded ? chunkPosition : lastStringEnding + 1;
           if (start !== end) {
             const beginningComma = chunk[start] === ",";
-            const stringChunk = chunk.slice(beginningComma ? start + 1 : start, end);
+            const stringChunk = chunk.slice(
+              beginningComma ? start + 1 : start,
+              end
+            );
             const strings: string[] = JSON.parse(`[${stringChunk}]`);
             this._pendingEvents.push({
               type: DataTypes.STRINGS,
-              data: strings
+              data: strings,
             });
           }
           if (arrayEnded) {
@@ -290,7 +316,11 @@ export default class HeapSnapshotParser {
                 this._state = ParserState.END;
                 break;
               default:
-                this._raiseError(new Error(`Unrecognized end-of-array character: ${chunk[chunkPosition]}`));
+                this._raiseError(
+                  new Error(
+                    `Unrecognized end-of-array character: ${chunk[chunkPosition]}`
+                  )
+                );
                 break;
             }
           } else {
@@ -300,8 +330,10 @@ export default class HeapSnapshotParser {
           break;
         }
         case ParserState.END:
-          if (chunk[chunkPosition] !== '}') {
-            this._raiseError(new Error(`Unexpected end of snapshot: ${chunk[chunkPosition]}`));
+          if (chunk[chunkPosition] !== "}") {
+            this._raiseError(
+              new Error(`Unexpected end of snapshot: ${chunk[chunkPosition]}`)
+            );
             break outerLoop;
           }
           chunkPosition++;
@@ -315,8 +347,15 @@ export default class HeapSnapshotParser {
       }
     }
 
-    if (chunkPosition < chunkLen && this._state !== ParserState.STRING_ARRAY && this._state !== ParserState.NUMBER_ARRAY && !this.hasErrored()) {
-      this._raiseError(new Error(`Parsing error: Did not consume whole chunk!`));
+    if (
+      chunkPosition < chunkLen &&
+      this._state !== ParserState.STRING_ARRAY &&
+      this._state !== ParserState.NUMBER_ARRAY &&
+      !this.hasErrored()
+    ) {
+      this._raiseError(
+        new Error(`Parsing error: Did not consume whole chunk!`)
+      );
     }
 
     if (chunkPosition < chunkLen) {
@@ -330,7 +369,11 @@ export default class HeapSnapshotParser {
 
   private _processPendingPromises(): void {
     const hasErrored = this.hasErrored();
-    while (!hasErrored && this._pendingReads.length > 0 && this._pendingEvents.length > 0) {
+    while (
+      !hasErrored &&
+      this._pendingReads.length > 0 &&
+      this._pendingEvents.length > 0
+    ) {
       this._pendingReads.shift().resolve(this._pendingEvents.shift());
     }
 
@@ -339,7 +382,10 @@ export default class HeapSnapshotParser {
         promise.reject(this._error);
       }
       this._pendingReads = [];
-    } else if (this._pendingEvents.length === 0 && this._state === ParserState.END) {
+    } else if (
+      this._pendingEvents.length === 0 &&
+      this._state === ParserState.END
+    ) {
       for (const promise of this._pendingReads) {
         promise.resolve(null);
       }
@@ -362,7 +408,7 @@ export default class HeapSnapshotParser {
       return Promise.resolve(this._pendingEvents.shift());
     } else {
       return new Promise<ParserEvent>((resolve, reject) => {
-        this._pendingReads.push({resolve, reject});
+        this._pendingReads.push({ resolve, reject });
       });
     }
   }

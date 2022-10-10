@@ -1,4 +1,4 @@
-import {ILeakRoot, ILeakScores, IStack, IPath} from '../common/interfaces';
+import { ILeakRoot, ILeakScores, IStack, IPath } from "../common/interfaces";
 
 /**
  * Represents a leak root in a BLeak report.
@@ -24,7 +24,7 @@ export default class LeakRoot implements ILeakRoot {
       id: this.id,
       paths: this.paths,
       scores: this.scores,
-      stacks: this.stacks
+      stacks: this.stacks,
     };
   }
 }

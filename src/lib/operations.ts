@@ -1,14 +1,20 @@
-import NodeDriver from './node_driver';
-import { StepType, SnapshotSizeSummary, IProgressBar, OperationType, Log } from '../common/interfaces';
-import BLeakConfig from './config';
-import { wait } from '../common/util';
-import HeapSnapshotParser from './heap_snapshot_parser';
+import NodeDriver from "./node_driver";
+import {
+  StepType,
+  SnapshotSizeSummary,
+  IProgressBar,
+  OperationType,
+  Log,
+} from "../common/interfaces";
+import BLeakConfig from "./config";
+import { wait } from "../common/util";
+import HeapSnapshotParser from "./heap_snapshot_parser";
 // import {InterceptorConfig, default as getInterceptor} from './mitmproxy_interceptor';
-import BLeakResults from './results';
-import {HeapGrowthTracker, HeapGraph, toPathTree} from './growth_graph';
+import BLeakResults from "./results";
+import { HeapGrowthTracker, HeapGraph, toPathTree } from "./growth_graph";
 // import StackFrameConverter from './stack_frame_converter';
-import PathToString from './path_to_string';
-import NopLog from '../common/nop_log';
+import PathToString from "./path_to_string";
+import NopLog from "../common/nop_log";
 
 type SnapshotCb = (sn: HeapSnapshotParser, log: Log) => Promise<void>;
 
@@ -17,7 +23,8 @@ export class OperationState {
   constructor(
     public NodeDriver: NodeDriver,
     public progressBar: IProgressBar,
-    public config: BLeakConfig) {}
+    public config: BLeakConfig
+  ) {}
 }
 
 const NEVER = Math.pow(2, 30);
@@ -28,10 +35,14 @@ abstract class Operation {
   public abstract description: string;
   // Returns the size of the operations graph beginning with this node.
   // Default is 1 (no dependent operations)
-  public size(): number { return 1; }
+  public size(): number {
+    return 1;
+  }
   // Returns 'true' if the operation is fulfilled and can be skipped.
   // Defaults to unskippable.
-  public skip(opSt: OperationState): boolean { return false; }
+  public skip(opSt: OperationState): boolean {
+    return false;
+  }
   // Runs the operation. Promise is resolved/rejected when completed.
   public async run(opSt: OperationState): Promise<void> {
     opSt.progressBar.updateDescription(this.description);
@@ -53,14 +64,16 @@ abstract class Operation {
         this.cancel(e);
         reject(e);
       }, this._timeout);
-      this._run(opSt).then(() => {
-        clearTimeout(timer);
-        opSt.progressBar.nextOperation();
-        resolve();
-      }).catch((e) => {
-        clearTimeout(timer);
-        reject(e);
-      });
+      this._run(opSt)
+        .then(() => {
+          clearTimeout(timer);
+          opSt.progressBar.nextOperation();
+          resolve();
+        })
+        .catch((e) => {
+          clearTimeout(timer);
+          reject(e);
+        });
     });
   }
   // Called when a running operation is canceled. Operation should exit gracefully.
@@ -71,8 +84,7 @@ abstract class Operation {
 }
 
 class NavigateOperation extends Operation {
-  constructor(timeout: number,
-      private readonly _url: string) {
+  constructor(timeout: number, private readonly _url: string) {
     super(timeout);
   }
 
@@ -89,9 +101,11 @@ class NavigateOperation extends Operation {
 
 class CheckOperation extends Operation {
   private _cancelled = false;
-  constructor(timeout: number,
-      private readonly _stepType: StepType,
-      private readonly _id: number) {
+  constructor(
+    timeout: number,
+    private readonly _stepType: StepType,
+    private readonly _id: number
+  ) {
     super(timeout);
   }
 
@@ -107,7 +121,9 @@ class CheckOperation extends Operation {
     return opSt.progressBar.timeEvent(OperationType.WAIT_FOR_PAGE, async () => {
       // Wait until either the operation is canceled (timeout) or the check succeeds.
       while (!this._cancelled) {
-        const success = await opSt.NodeDriver.runCode<boolean>(`typeof(BLeakConfig) !== "undefined" && BLeakConfig.${this._stepType}[${this._id}].check()`);
+        const success = await opSt.NodeDriver.runCode<boolean>(
+          `typeof(BLeakConfig) !== "undefined" && BLeakConfig.${this._stepType}[${this._id}].check()`
+        );
         if (success) {
           return;
         }
@@ -118,9 +134,11 @@ class CheckOperation extends Operation {
 }
 
 class NextOperation extends Operation {
-  constructor(timeout: number,
-      private readonly _stepType: StepType,
-      private readonly _id: number) {
+  constructor(
+    timeout: number,
+    private readonly _stepType: StepType,
+    private readonly _id: number
+  ) {
     super(timeout);
   }
 
@@ -129,7 +147,9 @@ class NextOperation extends Operation {
   }
 
   public async _run(opSt: OperationState): Promise<void> {
-    return opSt.NodeDriver.runCode<void>(`BLeakConfig.${this._stepType}[${this._id}].next()`);
+    return opSt.NodeDriver.runCode<void>(
+      `BLeakConfig.${this._stepType}[${this._id}].next()`
+    );
   }
 }
 
@@ -228,7 +248,9 @@ class StepOperation extends CompositeOperation {
     }
   }
 
-  public get description() { return ''; }
+  public get description() {
+    return "";
+  }
 }
 
 class InstrumentGrowingPathsOperation extends Operation {
@@ -237,7 +259,11 @@ class InstrumentGrowingPathsOperation extends Operation {
   }
 
   public _run(opSt: OperationState): Promise<void> {
-    return opSt.NodeDriver.runCode<void>(`window.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(toPathTree(opSt.results.leaks))})`);
+    return opSt.NodeDriver.runCode<void>(
+      `window.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
+        toPathTree(opSt.results.leaks)
+      )})`
+    );
   }
 }
 
@@ -246,44 +272,52 @@ class StepSeriesOperation extends CompositeOperation {
     super();
     const steps = config[stepType];
     for (let i = 0; i < steps.length; i++) {
-      this.children.push(
-        new StepOperation(config, stepType, i));
+      this.children.push(new StepOperation(config, stepType, i));
     }
   }
 
-  public get description(): string { return ''; }
+  public get description(): string {
+    return "";
+  }
 }
 
 class ProgramRunOperation extends CompositeOperation {
-  constructor(config: BLeakConfig, runLogin: boolean, iterations: number, takeInitialSnapshot: boolean, snapshotCb?: SnapshotCb) {
+  constructor(
+    config: BLeakConfig,
+    runLogin: boolean,
+    iterations: number,
+    takeInitialSnapshot: boolean,
+    snapshotCb?: SnapshotCb
+  ) {
     super();
     this.children.push(new NavigateOperation(config.timeout, config.url));
     if (runLogin && config.login.length > 0) {
       this.children.push(
-        new StepSeriesOperation(config, 'login'),
+        new StepSeriesOperation(config, "login"),
         new DelayOperation(config.postLoginSleep),
         new NavigateOperation(config.timeout, config.url)
       );
     }
     if (config.setup.length > 0) {
-      this.children.push(
-        new StepSeriesOperation(config, 'setup')
-      );
+      this.children.push(new StepSeriesOperation(config, "setup"));
     }
     if (takeInitialSnapshot && snapshotCb) {
       this.children.push(
         // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, 'loop', 0));
+        new CheckOperation(config.timeout, "loop", 0)
+      );
       if (config.postCheckSleep) {
         this.children.push(new DelayOperation(config.postCheckSleep));
       }
-      this.children.push(new TakeHeapSnapshotOperation(config.timeout, snapshotCb));
+      this.children.push(
+        new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
+      );
     }
     for (let i = 0; i < iterations; i++) {
       this.children.push(
-        new StepSeriesOperation(config, 'loop'),
+        new StepSeriesOperation(config, "loop"),
         // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, 'loop', 0)
+        new CheckOperation(config.timeout, "loop", 0)
       );
       if (config.postCheckSleep) {
         this.children.push(new DelayOperation(config.postCheckSleep));
@@ -296,43 +330,67 @@ class ProgramRunOperation extends CompositeOperation {
     }
   }
 
-  public get description() { return 'Running through the program'; }
+  public get description() {
+    return "Running through the program";
+  }
 }
 
 class FindLeaks extends CompositeOperation {
   private readonly _growthTracker = new HeapGrowthTracker();
   private _heapSnapshotSizeStats: SnapshotSizeSummary[] = [];
-  constructor(config: BLeakConfig, private _snapshotCb: SnapshotCb, private _flushResults: (results: BLeakResults) => void) {
+  constructor(
+    config: BLeakConfig,
+    private _snapshotCb: SnapshotCb,
+    private _flushResults: (results: BLeakResults) => void
+  ) {
     super();
     this.children.push(
-    //   new ConfigureProxyOperation({
-    //     log: NopLog,
-    //     rewrite: false,
-    //     fixes: config.fixedLeaks,
-    //     disableAllRewrites: false,
-    //     fixRewriteFunction: config.rewrite,
-    //     config: config.getBrowserInjection()
-    //   }),
-      new ProgramRunOperation(config, true, config.iterations, false, async (sn: HeapSnapshotParser, log: Log) => {
-        this._snapshotCb(sn, log);
-        await this._growthTracker.addSnapshot(sn, log);
-        this._heapSnapshotSizeStats.push(this._growthTracker.getGraph().calculateSize());
-      })
+      //   new ConfigureProxyOperation({
+      //     log: NopLog,
+      //     rewrite: false,
+      //     fixes: config.fixedLeaks,
+      //     disableAllRewrites: false,
+      //     fixRewriteFunction: config.rewrite,
+      //     config: config.getBrowserInjection()
+      //   }),
+      new ProgramRunOperation(
+        config,
+        true,
+        config.iterations,
+        false,
+        async (sn: HeapSnapshotParser, log: Log) => {
+          this._snapshotCb(sn, log);
+          await this._growthTracker.addSnapshot(sn, log);
+          this._heapSnapshotSizeStats.push(
+            this._growthTracker.getGraph().calculateSize()
+          );
+        }
+      )
     );
   }
 
-  public get description() { return 'Locating leaks'; }
+  public get description() {
+    return "Locating leaks";
+  }
 
   public skip(opSt: OperationState): boolean {
     return !!opSt.results;
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
-    return opSt.progressBar.timeEvent(OperationType.LEAK_IDENTIFICATION_AND_RANKING, async () => {
-      await super._run(opSt);
-      opSt.results = new BLeakResults(this._growthTracker.findLeakPaths(opSt.progressBar), undefined, undefined, this._heapSnapshotSizeStats);
-      this._flushResults(opSt.results);
-    });
+    return opSt.progressBar.timeEvent(
+      OperationType.LEAK_IDENTIFICATION_AND_RANKING,
+      async () => {
+        await super._run(opSt);
+        opSt.results = new BLeakResults(
+          this._growthTracker.findLeakPaths(opSt.progressBar),
+          undefined,
+          undefined,
+          this._heapSnapshotSizeStats
+        );
+        this._flushResults(opSt.results);
+      }
+    );
   }
 }
 
@@ -341,21 +399,28 @@ class GetGrowthStacksOperation extends Operation {
     super(timeout);
   }
 
-  public get description() { return 'Retrieving stack traces'; }
+  public get description() {
+    return "Retrieving stack traces";
+  }
 
   protected async _run(opSt: OperationState): Promise<void> {
-    return opSt.progressBar.timeEvent(OperationType.GET_GROWTH_STACKS, async () => {
-      const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(`window.$$$GET_STACK_TRACES$$$()`);
-      // TODO: port growthStacks to NodeJS
-    //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
-      opSt.results.leaks.forEach((lr) => {
-        const index = lr.id;
-        // const stacks = growthStacks[index] || [];
-        // stacks.forEach((s) => {
-        //   lr.addStackTrace(s);
-        // });
-      });
-    });
+    return opSt.progressBar.timeEvent(
+      OperationType.GET_GROWTH_STACKS,
+      async () => {
+        const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(
+          `window.$$$GET_STACK_TRACES$$$()`
+        );
+        // TODO: port growthStacks to NodeJS
+        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+        opSt.results.leaks.forEach((lr) => {
+          const index = lr.id;
+          // const stacks = growthStacks[index] || [];
+          // stacks.forEach((s) => {
+          //   lr.addStackTrace(s);
+          // });
+        });
+      }
+    );
   }
 }
 
@@ -363,33 +428,38 @@ class DiagnoseLeaks extends CompositeOperation {
   constructor(config: BLeakConfig, isLoggedIn: boolean) {
     super();
     this.children.push(
-    //   new ConfigureProxyOperation({
-    //     log: NopLog,
-    //     rewrite: true,
-    //     fixes: config.fixedLeaks,
-    //     config: config.getBrowserInjection(),
-    //     fixRewriteFunction: config.rewrite
-    //   }),
+      //   new ConfigureProxyOperation({
+      //     log: NopLog,
+      //     rewrite: true,
+      //     fixes: config.fixedLeaks,
+      //     config: config.getBrowserInjection(),
+      //     fixRewriteFunction: config.rewrite
+      //   }),
       // Warmup
       new ProgramRunOperation(config, !isLoggedIn, 1, false),
       new InstrumentGrowingPathsOperation(config.timeout),
-      new StepSeriesOperation(config, 'loop'),
-      new StepSeriesOperation(config, 'loop'),
+      new StepSeriesOperation(config, "loop"),
+      new StepSeriesOperation(config, "loop"),
       new GetGrowthStacksOperation(config.timeout)
     );
   }
 
-  public get description() { return 'Diagnosing leaks'; }
+  public get description() {
+    return "Diagnosing leaks";
+  }
 
   public skip(opSt: OperationState): boolean {
     return opSt.results.leaks.length === 0;
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
-    return opSt.progressBar.timeEvent(OperationType.LEAK_DIAGNOSES, async () => {
-      await super._run(opSt);
-      opSt.results = opSt.results.compact();
-    });
+    return opSt.progressBar.timeEvent(
+      OperationType.LEAK_DIAGNOSES,
+      async () => {
+        await super._run(opSt);
+        opSt.results = opSt.results.compact();
+      }
+    );
   }
 }
 
@@ -405,12 +475,12 @@ class RankingEvalConfig {
   constructor(public readonly fixIds: number[]) {}
   public metrics(): string {
     let rv: string[] = [];
-    for (let metric of ['leakShare', 'retainedSize', 'transitiveClosureSize']) {
-      if (this[metric as 'leakShare']) {
+    for (let metric of ["leakShare", "retainedSize", "transitiveClosureSize"]) {
+      if (this[metric as "leakShare"]) {
         rv.push(metric);
       }
     }
-    return rv.join(', ');
+    return rv.join(", ");
   }
 }
 
@@ -420,7 +490,7 @@ class RankingEvalConfig {
  */
 function leakSetKey(set: number[]): string {
   // Canonicalize order, then produce string.
-  return set.sort(increasingSort).join(',');
+  return set.sort(increasingSort).join(",");
 }
 
 function increasingSort(a: number, b: number): number {
@@ -430,41 +500,64 @@ function increasingSort(a: number, b: number): number {
 class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
   private _buffer: SnapshotSizeSummary[] = [];
   constructor(
-      config: BLeakConfig,
-      private _rankingEvalConfig: RankingEvalConfig,
-      private _runNumber: number,
-      private _flushResults: (results: BLeakResults) => void,
-      snapshotCb?: (ss: HeapSnapshotParser, metric: string, leaksFixed: number, iteration: number) => Promise<void>) {
+    config: BLeakConfig,
+    private _rankingEvalConfig: RankingEvalConfig,
+    private _runNumber: number,
+    private _flushResults: (results: BLeakResults) => void,
+    snapshotCb?: (
+      ss: HeapSnapshotParser,
+      metric: string,
+      leaksFixed: number,
+      iteration: number
+    ) => Promise<void>
+  ) {
     super();
     const buffer = this._buffer;
-    async function snapshotReport(sn: HeapSnapshotParser, log: Log): Promise<void> {
+    async function snapshotReport(
+      sn: HeapSnapshotParser,
+      log: Log
+    ): Promise<void> {
       const g = await HeapGraph.Construct(sn, log);
       const size = g.calculateSize();
       buffer.push(size);
     }
     this.children.push(
-    //   new ConfigureProxyOperation({
-    //     log: NopLog,
-    //     rewrite: false,
-    //     fixes: _rankingEvalConfig.fixIds,
-    //     disableAllRewrites: true,
-    //     fixRewriteFunction: config.rewrite,
-    //     config: config.getBrowserInjection()
-    //   }),
-      new ProgramRunOperation(config, false, config.rankingEvaluationIterations, true, (sn, log) => {
-        snapshotCb(sn, this._rankingEvalConfig.metrics(), this._rankingEvalConfig.fixIds.length, this._runNumber);
-        return snapshotReport(sn, log);
-      })
+      //   new ConfigureProxyOperation({
+      //     log: NopLog,
+      //     rewrite: false,
+      //     fixes: _rankingEvalConfig.fixIds,
+      //     disableAllRewrites: true,
+      //     fixRewriteFunction: config.rewrite,
+      //     config: config.getBrowserInjection()
+      //   }),
+      new ProgramRunOperation(
+        config,
+        false,
+        config.rankingEvaluationIterations,
+        true,
+        (sn, log) => {
+          snapshotCb(
+            sn,
+            this._rankingEvalConfig.metrics(),
+            this._rankingEvalConfig.fixIds.length,
+            this._runNumber
+          );
+          return snapshotReport(sn, log);
+        }
+      )
     );
   }
 
-  public get description() { return 'Running program in a configuration...' }
+  public get description() {
+    return "Running program in a configuration...";
+  }
 
   public skip(opSt: OperationState) {
     const len = this._rankingEvalConfig.fixIds.length;
-    for (let metric of ['leakShare', 'retainedSize', 'transitiveClosureSize']) {
-      if (this._rankingEvalConfig[metric as 'leakShare']) {
-        const metricStats = opSt.results.rankingEvaluation[metric as 'leakShare'];
+    for (let metric of ["leakShare", "retainedSize", "transitiveClosureSize"]) {
+      if (this._rankingEvalConfig[metric as "leakShare"]) {
+        const metricStats =
+          opSt.results.rankingEvaluation[metric as "leakShare"];
         if (!metricStats) {
           return false;
         }
@@ -484,11 +577,12 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
   protected async _run(opSt: OperationState): Promise<void> {
     await super._run(opSt);
     // Update results w/ data from run.
-    ['leakShare', 'retainedSize', 'transitiveClosureSize'].forEach((metric) => {
-      if (!this._rankingEvalConfig[metric as 'leakShare']) {
+    ["leakShare", "retainedSize", "transitiveClosureSize"].forEach((metric) => {
+      if (!this._rankingEvalConfig[metric as "leakShare"]) {
         return;
       }
-      const metricResults = opSt.results.rankingEvaluation[metric as 'leakShare'];
+      const metricResults =
+        opSt.results.rankingEvaluation[metric as "leakShare"];
       let configRuns = metricResults[this._rankingEvalConfig.fixIds.length];
       if (!configRuns) {
         configRuns = metricResults[this._rankingEvalConfig.fixIds.length] = [];
@@ -500,11 +594,29 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
 }
 
 export class EvaluateRankingMetricsOperation extends CompositeOperation {
-  constructor(config: BLeakConfig, results: BLeakResults, flushResults: (results: BLeakResults) => void, snapshotCb?: (ss: HeapSnapshotParser, metric: string, leaksFixed: number, iteration: number) => Promise<void>) {
+  constructor(
+    config: BLeakConfig,
+    results: BLeakResults,
+    flushResults: (results: BLeakResults) => void,
+    snapshotCb?: (
+      ss: HeapSnapshotParser,
+      metric: string,
+      leaksFixed: number,
+      iteration: number
+    ) => Promise<void>
+  ) {
     super();
-    function getSorter(rankBy: "transitiveClosureSize" | "leakShare" | "retainedSize" | "ownedObjects"): (a: number, b: number) => number {
+    function getSorter(
+      rankBy:
+        | "transitiveClosureSize"
+        | "leakShare"
+        | "retainedSize"
+        | "ownedObjects"
+    ): (a: number, b: number) => number {
       return (a, b) => {
-        return results.leaks[b].scores[rankBy] - results.leaks[a].scores[rankBy];
+        return (
+          results.leaks[b].scores[rankBy] - results.leaks[a].scores[rankBy]
+        );
       };
     }
     function fixMapper(leakId: number): number {
@@ -526,13 +638,24 @@ export class EvaluateRankingMetricsOperation extends CompositeOperation {
     const leaksById = results.leaks.map((l, i) => i);
     // Map from metric => list of fixes to apply, in-order.
     const orders = {
-      'leakShare': leaksById.sort(getSorter('leakShare')).map(fixMapper).reduce(removeDupes, []),
-      'retainedSize': leaksById.sort(getSorter('retainedSize')).map(fixMapper).reduce(removeDupes, []),
-      'transitiveClosureSize': leaksById.sort(getSorter('transitiveClosureSize')).map(fixMapper).reduce(removeDupes, [])
+      leakShare: leaksById
+        .sort(getSorter("leakShare"))
+        .map(fixMapper)
+        .reduce(removeDupes, []),
+      retainedSize: leaksById
+        .sort(getSorter("retainedSize"))
+        .map(fixMapper)
+        .reduce(removeDupes, []),
+      transitiveClosureSize: leaksById
+        .sort(getSorter("transitiveClosureSize"))
+        .map(fixMapper)
+        .reduce(removeDupes, []),
     };
     for (let metric in orders) {
       if (orders.hasOwnProperty(metric)) {
-        const metricCast = <'leakShare' | 'retainedSize' | 'transitiveClosureSize'> metric;
+        const metricCast = <
+          "leakShare" | "retainedSize" | "transitiveClosureSize"
+        >metric;
         const order = orders[metricCast];
         for (let i = 0; i <= order.length; i++) {
           // Note: When i=0, this is the empty array -- the base case.
@@ -563,7 +686,7 @@ export class EvaluateRankingMetricsOperation extends CompositeOperation {
         //   config: config.getBrowserInjection()
         // }),
         new NavigateOperation(config.timeout, config.url),
-        new StepSeriesOperation(config, 'login'),
+        new StepSeriesOperation(config, "login"),
         new DelayOperation(config.postLoginSleep)
       );
     }
@@ -571,16 +694,25 @@ export class EvaluateRankingMetricsOperation extends CompositeOperation {
       for (let i = 0; i < config.rankingEvaluationRuns; i++) {
         this.children.push(
           new EvaluateRankingMetricProgramRunOperation(
-            config, rankingConfig, i, flushResults, snapshotCb)
+            config,
+            rankingConfig,
+            i,
+            flushResults,
+            snapshotCb
+          )
         );
       }
     }
   }
 
-  public get description() { return 'Evaluating ranking metrics'; }
+  public get description() {
+    return "Evaluating ranking metrics";
+  }
   public skip(opSt: OperationState) {
     if (!opSt.results.leaks || opSt.results.leaks.length < 2) {
-      opSt.progressBar.log(`Unable to evaluate ranking metrics: BLeak results file does not contain more than 2 leak roots.`);
+      opSt.progressBar.log(
+        `Unable to evaluate ranking metrics: BLeak results file does not contain more than 2 leak roots.`
+      );
       return true;
     }
     return false;
@@ -588,12 +720,18 @@ export class EvaluateRankingMetricsOperation extends CompositeOperation {
 }
 
 export class FindAndDiagnoseLeaks extends CompositeOperation {
-  constructor(config: BLeakConfig, flushResults: (results: BLeakResults) => void, snapshotCb: SnapshotCb) {
+  constructor(
+    config: BLeakConfig,
+    flushResults: (results: BLeakResults) => void,
+    snapshotCb: SnapshotCb
+  ) {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
       new DiagnoseLeaks(config, true)
     );
   }
-  public get description() { return "Locating and diagnosing leaks"; }
+  public get description() {
+    return "Locating and diagnosing leaks";
+  }
 }

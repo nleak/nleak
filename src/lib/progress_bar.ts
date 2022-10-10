@@ -1,7 +1,7 @@
-import ProgressBar from 'progress';
+import ProgressBar from "progress";
 
-import {IProgressBar, OperationType} from '../common/interfaces';
-import {default as TimeLog, TimeLogEntry} from '../common/time_log';
+import { IProgressBar, OperationType } from "../common/interfaces";
+import { default as TimeLog, TimeLogEntry } from "../common/time_log";
 
 const START_TIME = process.hrtime();
 function getTimestamp(): number {
@@ -16,7 +16,10 @@ function getTimestamp(): number {
 export default class ProgressProgressBar implements IProgressBar {
   private _timeLog: TimeLog = null;
   private _bar: ProgressBar = null;
-  constructor(private readonly _debug: boolean, private readonly _time: boolean) {
+  constructor(
+    private readonly _debug: boolean,
+    private readonly _time: boolean
+  ) {
     if (this._time) {
       this._timeLog = new TimeLog();
     }
@@ -38,17 +41,20 @@ export default class ProgressProgressBar implements IProgressBar {
   public updateDescription(desc: string): void {
     if (this._bar) {
       this._bar.render({
-        msg: desc
+        msg: desc,
       });
     }
   }
   public setOperationCount(count: number): void {
-    this._bar = new ProgressBar('[:bar] :percent [:current/:total] :elapseds (ETA :etas) :msg', {
-      complete: '=',
-      incomplete: ' ',
-      width: 20,
-      total: count
-    });
+    this._bar = new ProgressBar(
+      "[:bar] :percent [:current/:total] :elapseds (ETA :etas) :msg",
+      {
+        complete: "=",
+        incomplete: " ",
+        width: 20,
+        total: count,
+      }
+    );
   }
   public debug(data: string): void {
     if (this._debug) {

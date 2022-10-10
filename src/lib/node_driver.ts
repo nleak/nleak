@@ -1,17 +1,17 @@
-import repl from 'repl';
-import fs from 'fs';
-import { setTimeout } from 'timers/promises'
-import { parseScript as parseJavaScript } from 'esprima';
-import childProcess from 'child_process';
-import cdp from 'chrome-remote-interface';
+import repl from "repl";
+import fs from "fs";
+import { setTimeout } from "timers/promises";
+import { parseScript as parseJavaScript } from "esprima";
+import childProcess from "child_process";
+import cdp from "chrome-remote-interface";
 
-import HeapSnapshotParser from '../lib/heap_snapshot_parser';
-import { Log, IDriver } from '../common/interfaces';
-import { wait } from '../common/util';
+import HeapSnapshotParser from "../lib/heap_snapshot_parser";
+import { Log, IDriver } from "../common/interfaces";
+import { wait } from "../common/util";
 
 interface ChildProcessResponse {
-  _process: childProcess.ChildProcess,
-  _debugger: cdp.Client // chrome debugger protocol client, ref: https://chromedevtools.github.io/devtools-protocol/1-2/
+  _process: childProcess.ChildProcess;
+  _debugger: cdp.Client; // chrome debugger protocol client, ref: https://chromedevtools.github.io/devtools-protocol/1-2/
 }
 
 async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
@@ -20,30 +20,36 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
     let _debugger: cdp.Client;
 
     try {
-      _process = childProcess.spawn('node', ['--inspect', absPath]);
+      _process = childProcess.spawn("node", ["--inspect", absPath]);
 
       // attach events
-      _process.on('spawn', async () => {
+      _process.on("spawn", async () => {
         // spawn successfully
-        console.log(`PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`);
+        console.log(
+          `PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`
+        );
         _debugger = await cdp({ port: 9229 }); // node's default degging port
 
         resolve({
           _process: _process,
           _debugger: _debugger,
         });
-      })
-      _process.on('message', (msg) => {
-        console.log('PARENT got message:', msg);
       });
-      _process.stdout.on('data', (data) => {
+      _process.on("message", (msg) => {
+        console.log("PARENT got message:", msg);
+      });
+      _process.stdout.on("data", (data) => {
         console.log(`PID[${_process.pid}] stdout: ${data}`);
       });
-      _process.on('close', (code) => {
-        console.log(`PID[${_process.pid}] child process close all stdio with code ${code}`);
+      _process.on("close", (code) => {
+        console.log(
+          `PID[${_process.pid}] child process close all stdio with code ${code}`
+        );
       });
-      _process.on('exit', (code) => {
-        console.log(`PID[${_process.pid}] child process exited with code ${code}`);
+      _process.on("exit", (code) => {
+        console.log(
+          `PID[${_process.pid}] child process exited with code ${code}`
+        );
       });
     } catch (error) {
       console.error("failed to spawn another NodeJS child process");
@@ -56,18 +62,14 @@ export default class NodeDriver implements IDriver {
   public static async Launch(
     log: Log,
     interceptPaths: string[] = [],
-    quiet: boolean = true,
+    quiet: boolean = true
   ): Promise<NodeDriver> {
     // TODO: change hardcoded path to be passed from method params
-    const path = "/Users/chenxizh/workspace/practium/leakscope/test/example/sample_app.js";
+    const path =
+      "/Users/chenxizh/workspace/practium/leakscope/test/example/sample_app.js";
     const { _process, _debugger } = await runUserProcess(path);
 
-    const driver = new NodeDriver(
-      log,
-      interceptPaths,
-      _process,
-      _debugger,
-    );
+    const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
 
     return driver;
   }
@@ -83,7 +85,7 @@ export default class NodeDriver implements IDriver {
     log: Log,
     interceptPaths: string[],
     _process: childProcess.ChildProcess,
-    _debugger: cdp.Client,
+    _debugger: cdp.Client
   ) {
     this._log = log;
     this._interceptPaths = interceptPaths;
@@ -122,7 +124,10 @@ export default class NodeDriver implements IDriver {
     //   return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
     // }
     // return e.result.value;
-    console.log("[DEBUG node_driver] runCode<T> need implementation to run: ", expression);
+    console.log(
+      "[DEBUG node_driver] runCode<T> need implementation to run: ",
+      expression
+    );
     return new Promise<T>(() => {});
   }
 
@@ -133,14 +138,16 @@ export default class NodeDriver implements IDriver {
 
     // 200 KB chunks
     this._debugger.HeapProfiler.on("addHeapSnapshotChunk", (evt) => {
-      fs.writeFileSync('data.heap', JSON.stringify(evt.chunk));
+      fs.writeFileSync("data.heap", JSON.stringify(evt.chunk));
       console.log(`add No.${count} 200KB chunk`);
       count++;
       parser.addSnapshotChunk(evt.chunk);
     });
 
     // taking a real snapshot.
-    await this._debugger.HeapProfiler.takeHeapSnapshot({ reportProgress: false });
+    await this._debugger.HeapProfiler.takeHeapSnapshot({
+      reportProgress: false,
+    });
 
     return parser;
   }
@@ -173,7 +180,7 @@ export default class NodeDriver implements IDriver {
     // this._shutdown = true;
     // await Promise.all([this._process.dispose(), this.mitmProxy.shutdown()]);
     return new Promise<void>(() => {
-      return "shutdown needs implementation"
+      return "shutdown needs implementation";
     });
   }
 }
