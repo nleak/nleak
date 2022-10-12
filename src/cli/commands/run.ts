@@ -1,22 +1,13 @@
-import {
-  readFileSync,
-  mkdirSync,
-  existsSync,
-  writeFileSync,
-} from "fs";
-import { join } from "path";
+import { readFileSync, mkdirSync, existsSync, createWriteStream, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { createGzip } from "node:zlib";
 import { CommandModule } from "yargs";
 
+import NLeak from "../../lib/nleak";
 import ProgressProgressBar from "../../lib/progress_bar";
-import { IDriver } from "../../common/interfaces";
 import BLeakResults from "../../lib/results";
 import NodeDriver from "../../lib/node_driver";
-
-// import BLeak from "../../lib/bleak";
-// import TextReporter from "../../lib/text_reporter";
-// import { createGzip } from "zlib";
-
-// import ProgressProgressBar from "../../lib/progress_progress_bar";
+import TextReporter from "../../lib/text_reporter";
 
 const Run: CommandModule = {
   command: "run",
@@ -41,7 +32,7 @@ const Run: CommandModule = {
     // https://stackoverflow.com/a/38482688
     process.on("warning", (e: Error) => progressBarLogger.error(e.stack));
 
-    let nodeDriver: IDriver;
+    let nodeDriver: NodeDriver;
     async function main() {
       const configFileSource = readFileSync(args.config).toString();
 
@@ -81,67 +72,63 @@ const Run: CommandModule = {
 
       writeFileSync(join(args.out, "config.js"), configFileSource);
 
-      nodeDriver = await NodeDriver.Launch(
-        progressBarLogger,
-        [],
-        true
-      );
+      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true);
 
       // Test driver snippet, need to removed
       await nodeDriver.takeHeapSnapshot();
 
       // belows start the BLeak FindLeaks logic
-      // let i = 0;
-      // BLeak.FindLeaks(
-      //   configFileSource,
-      //   progressBarLogger,
-      //   nodeDriver,
-      //   (results) => {
-      //     writeFileSync(bleakResultsOutput, JSON.stringify(results));
-      //     const resultsLog = TextReporter(results);
-      //     writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
-      //   },
-      //   (sn) => {
-      //     if (args.snapshot) {
-      //       const str = createWriteStream(
-      //         join(
-      //           args.out,
-      //           "snapshots",
-      //           "leak_detection",
-      //           `snapshot_${i}.heapsnapshot.gz`
-      //         )
-      //       );
-      //       i++;
-      //       const gz = createGzip();
-      //       gz.pipe(str);
-      //       sn.onSnapshotChunk = function (chunk, end) {
-      //         gz.write(chunk);
-      //         if (end) {
-      //           gz.end();
-      //         }
-      //       };
-      //     }
-      //     return Promise.resolve();
-      //   },
-      //   bleakResults
-      // )
-      //   .then((results) => {
-      //     writeFileSync(bleakResultsOutput, JSON.stringify(results));
-      //     const resultsLog = TextReporter(results);
-      //     writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
-      //     if (args["produce-time-log"]) {
-      //       writeFileSync(
-      //         join(args.out, "time_log.json"),
-      //         JSON.stringify(progressBarLogger.getTimeLog())
-      //       );
-      //     }
-      //     console.log(`Results can be found in ${args.out}`);
-      //     return shutDown();
-      //   })
-      //   .catch((e) => {
-      //     progressBarLogger.error(`${e}`);
-      //     return shutDown();
-      //   });
+      let i = 0;
+      NLeak.FindLeaks(
+        configFileSource,
+        progressBarLogger,
+        nodeDriver,
+        (results) => {
+          writeFileSync(bleakResultsOutput, JSON.stringify(results));
+          const resultsLog = TextReporter(results);
+          writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
+        },
+        (sn) => {
+          if (args.snapshot) {
+            const str = createWriteStream(
+              join(
+                args.out,
+                "snapshots",
+                "leak_detection",
+                `snapshot_${i}.heapsnapshot.gz`
+              )
+            );
+            i++;
+            const gz = createGzip();
+            gz.pipe(str);
+            sn.onSnapshotChunk = function (chunk, end) {
+              gz.write(chunk);
+              if (end) {
+                gz.end();
+              }
+            };
+          }
+          return Promise.resolve();
+        },
+        bleakResults
+      )
+        .then((results) => {
+          writeFileSync(bleakResultsOutput, JSON.stringify(results));
+          const resultsLog = TextReporter(results);
+          writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
+          if (args["produce-time-log"]) {
+            writeFileSync(
+              join(args.out, "time_log.json"),
+              JSON.stringify(progressBarLogger.getTimeLog())
+            );
+          }
+          console.log(`Results can be found in ${args.out}`);
+          return shutDown();
+        })
+        .catch((e) => {
+          progressBarLogger.error(`${e}`);
+          return shutDown();
+        });
     }
 
     main();
