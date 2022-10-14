@@ -1,10 +1,12 @@
+
+
 // Portion of the bleak agent that should be transformed to capture scope information.
 // TODO: Can add Maps and Sets here.
 
 /**
  * Override bind so that we properly capture __scope__ here.
  */
-function aFunction(it: Function): Function {
+ function aFunction(it: Function): Function {
   if (typeof it !== 'function') {
     throw TypeError(it + ' is not a function!');
   }
@@ -18,6 +20,12 @@ function isObject(it: any): it is object {
 const _slice = [].slice;
 const factories: {[len: number]: Function} = {};
 
+export function test() {
+  const f = Function('F,a', 'return new F(a[0])');
+  console.log(f);
+}
+
+
 function construct(F: Function, len: number, args: any[]) {
   if(!(len in factories)){
     for(var n = [], i = 0; i < len; i++)n[i] = 'a[' + i + ']';
@@ -27,13 +35,15 @@ function construct(F: Function, len: number, args: any[]) {
 }
 
 function invoke(fn: Function, args: any[], that: any){
+  // calls the specified function with a given this value, and arguments provided as an array
   return fn.apply(that, args);
 }
 
 Function.prototype.bind = function bind(this: Function, that: any, ...partArgs: any[]): Function {
-  const fn       = aFunction(this);
+  const fn       = aFunction(this); // Check 'this' is a function
   const bound = function(this: any, ...restArgs: any[]){
     const args = partArgs.concat(restArgs);
+    // if the prototype property of a constructor appears anywhere in the prototype chain of an object.
     return this instanceof bound ? construct(fn, args.length, args) : invoke(fn, args, that);
   };
   if (isObject(fn.prototype)) {
@@ -47,9 +57,10 @@ Function.prototype.bind = function bind(this: Function, that: any, ...partArgs: 
 // these apps.
 // So we define a skeleton that says 'denied', which is really what Chrome should be doing...
 // Make sure we're running in the main browser thread...
-if (typeof(window) !== "undefined") {
-  (window as any)['Notification'] = {
-    permission: 'denied',
-    requestPermission: function() { return Promise.resolve('denied'); }
-  };
-}
+// if (typeof(window) !== "undefined") {
+//   (window as any)['Notification'] = {
+//     permission: 'denied',
+//     requestPermission: function() { return Promise.resolve('denied'); }
+//   };
+// }
+
