@@ -25,3 +25,8 @@ const server = http.createServer((req, res) => {
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
+
+//multiple steps, memory leak may happen in the first two steps:
+//step1: register
+//step2: login
+//step3: return user data

@@ -1,11 +1,16 @@
 exports.url = "http://localhost:3000/test.html";
 
+const wrapper_path = pwd("wrapper.js");
+
 // Due to throttling (esp. when browser is in background), it may take longer
 // than anticipated for the click we fire to actually run. We want to make
 // sure all snapshots occur after the click processes.
 var startedClickCount = 0;
 var completedClickCount = 0;
 exports.loop = [
+	//1. fetch landing page from sample_app
+	//2. or just run a script, e.g. init sample_app.js, in the loop, define a boolean var
+	//**how to integrate sample_app.js */
   {
     name: "Click Button",
     check: function () {
