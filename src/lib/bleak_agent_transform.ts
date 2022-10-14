@@ -1,11 +1,20 @@
 
 
-// Portion of the bleak agent that should be transformed to capture scope information.
+/**
+ * Portion of the bleak agent that should be transformed to capture scope information.
+ * 
+ * Purpose of this function: Override bind so that we properly capture __scope__ here.
+ * 
+ * What is Function.bind - The bind function provides native support for partial application, 
+ * and 'implicitly' retains the arguments passed to it.
+ * 
+ * Why override - native methods hide state from heap snapshots.
+ * 
+ * After override - Retains the arguments as ordinary JavaScript closure variables.
+ *  */ 
+
 // TODO: Can add Maps and Sets here.
 
-/**
- * Override bind so that we properly capture __scope__ here.
- */
  function aFunction(it: Function): Function {
   if (typeof it !== 'function') {
     throw TypeError(it + ' is not a function!');
@@ -22,7 +31,9 @@ const factories: {[len: number]: Function} = {};
 
 export function test() {
   const f = Function('F,a', 'return new F(a[0])');
-  console.log(f);
+  console.log(f.toString());
+  console.log(typeof f);
+  return factories;
 }
 
 
@@ -31,6 +42,7 @@ function construct(F: Function, len: number, args: any[]) {
     for(var n = [], i = 0; i < len; i++)n[i] = 'a[' + i + ']';
     factories[len] = Function('F,a', 'return new F(' + n.join(',') + ')');
   }
+  console.log(factories[len](F, args).toString());
   return factories[len](F, args);
 }
 
