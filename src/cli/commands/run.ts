@@ -72,7 +72,7 @@ const Run: CommandModule = {
 
       writeFileSync(join(args.out, "config.js"), configFileSource);
 
-      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true);
+      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true, configFileSource);
 
       // Test driver snippet, need to removed
       await nodeDriver.takeHeapSnapshot();

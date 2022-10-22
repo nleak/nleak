@@ -1,10 +1,13 @@
 exports.url = "http://localhost:3000/test.html";
 
+//#TODO: define entry point of sample-app
+
 // Due to throttling (esp. when browser is in background), it may take longer
 // than anticipated for the click we fire to actually run. We want to make
 // sure all snapshots occur after the click processes.
 var startedClickCount = 0;
 var completedClickCount = 0;
+//one step
 exports.loop = [
   {
     name: "Click Button",

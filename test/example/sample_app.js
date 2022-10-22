@@ -3,6 +3,8 @@ const http = require('http');
 const hostname = '127.0.0.1';
 const port = 3000;
 
+//add callable methods by other script aka wrapper.js
+
 var obj = {};
 var power = 2;
 function leaking() {
