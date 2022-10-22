@@ -124,6 +124,7 @@ export default class NodeDriver implements IDriver {
     //   return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
     // }
     // return e.result.value;
+
     console.log(
       "[DEBUG node_driver] runCode<T> need implementation to run: ",
       expression
@@ -134,13 +135,10 @@ export default class NodeDriver implements IDriver {
   public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {
     console.log("in takeHeapSnapshot");
     const parser = new HeapSnapshotParser();
-    let count = 1;
 
     // 200 KB chunks
     this._debugger.HeapProfiler.on("addHeapSnapshotChunk", (evt) => {
       fs.writeFileSync("data.heap", JSON.stringify(evt.chunk));
-      console.log(`add No.${count} 200KB chunk`);
-      count++;
       parser.addSnapshotChunk(evt.chunk);
     });
 

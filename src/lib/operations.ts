@@ -277,7 +277,7 @@ class StepSeriesOperation extends CompositeOperation {
   }
 
   public get description(): string {
-    return "";
+    return "StepSeriesOperation";
   }
 }
 
@@ -290,34 +290,36 @@ class ProgramRunOperation extends CompositeOperation {
     snapshotCb?: SnapshotCb
   ) {
     super();
-    this.children.push(new NavigateOperation(config.timeout, config.url));
-    if (runLogin && config.login.length > 0) {
-      this.children.push(
-        new StepSeriesOperation(config, "login"),
-        new DelayOperation(config.postLoginSleep),
-        new NavigateOperation(config.timeout, config.url)
-      );
-    }
-    if (config.setup.length > 0) {
-      this.children.push(new StepSeriesOperation(config, "setup"));
-    }
-    if (takeInitialSnapshot && snapshotCb) {
-      this.children.push(
-        // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, "loop", 0)
-      );
-      if (config.postCheckSleep) {
-        this.children.push(new DelayOperation(config.postCheckSleep));
-      }
-      this.children.push(
-        new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
-      );
-    }
+    console.log("[DEBUG] in ProgramRunOperation config");
+    // this.children.push(new NavigateOperation(config.timeout, config.url));
+    // if (runLogin && config.login.length > 0) {
+    //   this.children.push(
+    //     new StepSeriesOperation(config, "login"),
+    //     new DelayOperation(config.postLoginSleep),
+    //     new NavigateOperation(config.timeout, config.url)
+    //   );
+    // }
+    // if (config.setup.length > 0) {
+    //   this.children.push(new StepSeriesOperation(config, "setup"));
+    // }
+    // if (takeInitialSnapshot && snapshotCb) {
+    //   this.children.push(
+    //     // Make sure we're at step 0 before taking the snapshot.
+    //     new CheckOperation(config.timeout, "loop", 0)
+    //   );
+    //   if (config.postCheckSleep) {
+    //     this.children.push(new DelayOperation(config.postCheckSleep));
+    //   }
+    //   this.children.push(
+    //     new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
+    //   );
+    // }
+
     for (let i = 0; i < iterations; i++) {
       this.children.push(
-        new StepSeriesOperation(config, "loop"),
+        // new StepSeriesOperation(config, "loop"),
         // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, "loop", 0)
+        // new CheckOperation(config.timeout, "loop", 0)
       );
       if (config.postCheckSleep) {
         this.children.push(new DelayOperation(config.postCheckSleep));
@@ -344,6 +346,8 @@ class FindLeaks extends CompositeOperation {
     private _flushResults: (results: BLeakResults) => void
   ) {
     super();
+
+    console.log("[DEBUG] FindLeaks constructor");
     this.children.push(
       //   new ConfigureProxyOperation({
       //     log: NopLog,
@@ -427,6 +431,7 @@ class GetGrowthStacksOperation extends Operation {
 class DiagnoseLeaks extends CompositeOperation {
   constructor(config: BLeakConfig, isLoggedIn: boolean) {
     super();
+    console.log("[DEBUG] in DiagnoseLeaks");
     this.children.push(
       //   new ConfigureProxyOperation({
       //     log: NopLog,
@@ -728,7 +733,7 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      new DiagnoseLeaks(config, true)
+      // new DiagnoseLeaks(config, true)
     );
   }
   public get description() {
