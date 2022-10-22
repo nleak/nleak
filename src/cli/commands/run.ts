@@ -122,7 +122,6 @@ const Run: CommandModule = {
               JSON.stringify(progressBarLogger.getTimeLog())
             );
           }
-          console.log('NLeak finished, result', results);
           console.log(`Results can be found in ${args.out}`);
           return shutDown();
         })
