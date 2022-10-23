@@ -41,7 +41,7 @@
     "chrome-remote-interface": "^0.31.3",
     "error-stack-parser": "^2.1.4",
     "esprima": "^4.0.1",
-    "node-fetch": "^2.6.6",
+    "node-fetch": "^2.6.7",
     "progress": "^2.0.3",
     "yargs": "^17.6.0"
   }
