@@ -198,7 +198,7 @@ class TakeHeapSnapshotOperation extends Operation {
   }
 
   public get description(): string {
-    return `Taking a heap snapshot`;
+    return `Taking a heap snapshot\n`;
   }
 
   public async _run(opSt: OperationState): Promise<void> {
@@ -795,6 +795,6 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     );
   }
   public get description() {
-    return "Locating and diagnosing leaks";
+    return "Locating and diagnosing leaks\n";
   }
 }

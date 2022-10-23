@@ -16,7 +16,7 @@ interface ChildProcessResponse {
 }
 
 async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
-  return new Promise(function (resolve, reject) {
+  return new Promise(async function (resolve, reject) {
     let _process: childProcess.ChildProcess;
     let _debugger: cdp.Client;
 
@@ -41,6 +41,9 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
       });
       _process.stdout.on("data", (data) => {
         console.log(`PID[${_process.pid}] stdout: ${data}`);
+      });
+      _process.on("error", (err) => {
+        console.log(`PID[${_process.pid}] error: ${err}`);
       });
       _process.on("close", (code) => {
         console.log(
@@ -71,7 +74,7 @@ export default class NodeDriver implements IDriver {
   ): Promise<NodeDriver> {
     // TODO: change hardcoded path to be passed from method params
     const path =
-      "/Users/chenxizh/workspace/practium/leakscope/test/example/sample_app.js";
+      "/Users/chenxizh/workspace/practium/nleak/test/example/sample_app.js";
     const { _process, _debugger } = await runUserProcess(path);
 
     const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
@@ -130,7 +133,7 @@ export default class NodeDriver implements IDriver {
     console.log( "[DEBUG node_driver] callEndpoint()", endpoint);
     fetch(endpoint)
       .then((res: any) => res.text())
-      .then((text: any) => console.log("========= fetch result", text));
+      .then((text: any) => console.log("[DEBUG node_driver] fetch result", text));
     return;
   }
 

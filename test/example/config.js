@@ -2,7 +2,19 @@ exports.url = "http://localhost:2333";
 
 exports.loop = [
   {
-    name: "Call /leak API",
+    name: "1st Call /leak API",
+    endpoint: "http://localhost:2333/leak",
+    check: () => {},
+    next: () => {},
+  },
+  {
+    name: "2nd Call /leak API",
+    endpoint: "http://localhost:2333/leak",
+    check: () => {},
+    next: () => {},
+  },
+  {
+    name: "3rd Call /leak API",
     endpoint: "http://localhost:2333/leak",
     check: () => {},
     next: () => {},
