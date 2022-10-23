@@ -1,13 +1,14 @@
 import repl from "repl";
 import fs from "fs";
-import { setTimeout } from "timers/promises";
 import { parseScript as parseJavaScript } from "esprima";
 import childProcess from "child_process";
 import cdp from "chrome-remote-interface";
+import fetch from 'node-fetch';
 
 import HeapSnapshotParser from "../lib/heap_snapshot_parser";
 import { Log, IDriver } from "../common/interfaces";
 import { wait } from "../common/util";
+import BLeakConfig from "./config";
 
 interface ChildProcessResponse {
   _process: childProcess.ChildProcess;
@@ -56,6 +57,10 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
       reject(error);
     }
   });
+}
+
+function exceptionDetailsToString(e: any): string {
+  return `${e.url}:${e.lineNumber}:${e.columnNumber} ${e.text} ${e.exception ? e.exception.description : ""}\n${e.stackTrace ? e.stackTrace.description : ""}\n  ${e.stackTrace ? e.stackTrace.callFrames.filter((f: { url: string; }) => f.url !== "").map((f: { functionName: any; url: any; lineNumber: any; columnNumber: any; }) => `${f.functionName ? `${f.functionName} at ` : ""}${f.url}:${f.lineNumber}:${f.columnNumber}`).join("\n  ") : ""}\n`;
 }
 
 export default class NodeDriver implements IDriver {
@@ -117,19 +122,29 @@ export default class NodeDriver implements IDriver {
     return driver;
   }
 
-  public async runCode<T>(expression: string): Promise<T> {
-    // const e = await this._runtime.evaluate({ expression, returnByValue: true });
-    // this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
-    // if (e.exceptionDetails) {
-    //   return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
-    // }
-    // return e.result.value;
+  public async callEndpoint<T>(
+    config: BLeakConfig,
+    id: number
+  ): Promise<void> {
+    const endpoint = config.loop[id].endpoint;
+    console.log( "[DEBUG node_driver] callEndpoint()", endpoint);
+    fetch(endpoint)
+      .then((res: any) => res.text())
+      .then((text: any) => console.log("========= fetch result", text));
+    return;
+  }
 
-    console.log(
-      "[DEBUG node_driver] runCode<T> need implementation to run: ",
-      expression
-    );
-    return new Promise<T>(() => {});
+  public async runCode<T>(expression: string): Promise<T> {
+    // following is the implementation of runCode in the child process
+    console.log( "[DEBUG node_driver] runCode: ", expression);
+    const e = await this._debugger.Runtime.evaluate({ expression, returnByValue: true });
+    this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
+    if (e.exceptionDetails) {
+      console.log("exceptionDetails: ", e.exceptionDetails);
+      return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
+    }
+    console.log("e.result.value: ", e.result.value);
+    return e.result.value;
   }
 
   public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {

@@ -1,7 +1,7 @@
 const http = require('http');
 
 const hostname = '127.0.0.1';
-const port = 3000;
+const port = 2333;
 
 var obj = {};
 var power = 2;
@@ -11,15 +11,24 @@ function leaking() {
     for (var j = 0; j < top; j++) {
         obj[Math.random()] = Math.random();
     }
+    console.log("memory leaking...");
 }
 
 const server = http.createServer((req, res) => {
-    // call leaking
+  if (req.url === "/leak" && req.method === "GET") {
     leaking();
 
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('run leaking() done');
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.write("leaking() done");
+    res.end();
+  } else if (req.url === "/" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.write("hello from sample_app.js");
+    res.end();
+  } else {
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ message: "Route not found" }));
+  }
 });
 
 server.listen(port, hostname, () => {

@@ -133,6 +133,29 @@ class CheckOperation extends Operation {
   }
 }
 
+// ParentCallNextOperation is a special operation that is used to run the next()
+// function from the nleak host instead of from the child process.
+class ParentCallNextOperation extends Operation {
+  constructor(
+    private readonly _config: BLeakConfig,
+    private readonly _stepType: StepType,
+    private readonly _id: number
+  ) {
+    super(_config.timeout);
+  }
+
+  public get description(): string {
+    return `Parent call advancing to next state ${this._stepType}[${this._id}].next()`;
+  }
+
+  public async _run(opSt: OperationState): Promise<void> {
+    return opSt.NodeDriver.callEndpoint<void>(
+      this._config,
+      this._id,
+    );
+  }
+}
+
 class NextOperation extends Operation {
   constructor(
     timeout: number,
@@ -235,6 +258,23 @@ abstract class CompositeOperation extends Operation {
   }
 }
 
+// ParentCallStepOperation is an operation that is used to run the steps
+// from the nleak parent process instead of from the child process.
+// Note that we assume NodeJS environment doesn't need check().
+class ParentCallStepOperation extends CompositeOperation {
+  constructor(config: BLeakConfig, stepType: StepType, id: number) {
+    super();
+    this.children.push(new ParentCallNextOperation(config, stepType, id));
+    if (config.postNextSleep) {
+      this.children.push(new DelayOperation(config.postNextSleep));
+    }
+  }
+
+  public get description() {
+    return "";
+  }
+}
+
 class StepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
@@ -264,6 +304,21 @@ class InstrumentGrowingPathsOperation extends Operation {
         toPathTree(opSt.results.leaks)
       )})`
     );
+  }
+}
+
+// ParentCallStepSeriesOperation run steps from the nleak parent process.
+class ParentCallStepSeriesOperation extends CompositeOperation {
+  constructor(config: BLeakConfig, stepType: StepType) {
+    super();
+    const steps = config[stepType];
+    for (let i = 0; i < steps.length; i++) {
+      this.children.push(new ParentCallStepOperation(config, stepType, i));
+    }
+  }
+
+  public get description(): string {
+    return "ParentCallStepSeriesOperation";
   }
 }
 
@@ -317,7 +372,7 @@ class ProgramRunOperation extends CompositeOperation {
 
     for (let i = 0; i < iterations; i++) {
       this.children.push(
-        // new StepSeriesOperation(config, "loop"),
+        new ParentCallStepSeriesOperation(config, "loop"),
         // Make sure we're at step 0 before taking the snapshot.
         // new CheckOperation(config.timeout, "loop", 0)
       );
@@ -382,6 +437,9 @@ class FindLeaks extends CompositeOperation {
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
+    console.log("[DEBUG] FindLeaks _run");
+    // await wait(20000);
+    // console.log("=============== wait ===============");
     return opSt.progressBar.timeEvent(
       OperationType.LEAK_IDENTIFICATION_AND_RANKING,
       async () => {
