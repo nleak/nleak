@@ -133,6 +133,29 @@ class CheckOperation extends Operation {
   }
 }
 
+// ParentCallNextOperation is a special operation that is used to run the next()
+// function from the nleak host instead of from the child process.
+class ParentCallNextOperation extends Operation {
+  constructor(
+    private readonly _config: BLeakConfig,
+    private readonly _stepType: StepType,
+    private readonly _id: number
+  ) {
+    super(_config.timeout);
+  }
+
+  public get description(): string {
+    return `Parent call advancing to next state ${this._stepType}[${this._id}].next()`;
+  }
+
+  public async _run(opSt: OperationState): Promise<void> {
+    return opSt.NodeDriver.callEndpoint<void>(
+      this._config,
+      this._id,
+    );
+  }
+}
+
 class NextOperation extends Operation {
   constructor(
     timeout: number,
@@ -175,7 +198,7 @@ class TakeHeapSnapshotOperation extends Operation {
   }
 
   public get description(): string {
-    return `Taking a heap snapshot`;
+    return `Taking a heap snapshot\n`;
   }
 
   public async _run(opSt: OperationState): Promise<void> {
@@ -235,6 +258,23 @@ abstract class CompositeOperation extends Operation {
   }
 }
 
+// ParentCallStepOperation is an operation that is used to run the steps
+// from the nleak parent process instead of from the child process.
+// Note that we assume NodeJS environment doesn't need check().
+class ParentCallStepOperation extends CompositeOperation {
+  constructor(config: BLeakConfig, stepType: StepType, id: number) {
+    super();
+    this.children.push(new ParentCallNextOperation(config, stepType, id));
+    if (config.postNextSleep) {
+      this.children.push(new DelayOperation(config.postNextSleep));
+    }
+  }
+
+  public get description() {
+    return "";
+  }
+}
+
 class StepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
@@ -267,6 +307,21 @@ class InstrumentGrowingPathsOperation extends Operation {
   }
 }
 
+// ParentCallStepSeriesOperation run steps from the nleak parent process.
+class ParentCallStepSeriesOperation extends CompositeOperation {
+  constructor(config: BLeakConfig, stepType: StepType) {
+    super();
+    const steps = config[stepType];
+    for (let i = 0; i < steps.length; i++) {
+      this.children.push(new ParentCallStepOperation(config, stepType, i));
+    }
+  }
+
+  public get description(): string {
+    return "ParentCallStepSeriesOperation";
+  }
+}
+
 class StepSeriesOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType) {
     super();
@@ -277,7 +332,7 @@ class StepSeriesOperation extends CompositeOperation {
   }
 
   public get description(): string {
-    return "";
+    return "StepSeriesOperation";
   }
 }
 
@@ -290,34 +345,36 @@ class ProgramRunOperation extends CompositeOperation {
     snapshotCb?: SnapshotCb
   ) {
     super();
-    this.children.push(new NavigateOperation(config.timeout, config.url));
-    if (runLogin && config.login.length > 0) {
-      this.children.push(
-        new StepSeriesOperation(config, "login"),
-        new DelayOperation(config.postLoginSleep),
-        new NavigateOperation(config.timeout, config.url)
-      );
-    }
-    if (config.setup.length > 0) {
-      this.children.push(new StepSeriesOperation(config, "setup"));
-    }
-    if (takeInitialSnapshot && snapshotCb) {
-      this.children.push(
-        // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, "loop", 0)
-      );
-      if (config.postCheckSleep) {
-        this.children.push(new DelayOperation(config.postCheckSleep));
-      }
-      this.children.push(
-        new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
-      );
-    }
+    console.log("[DEBUG] in ProgramRunOperation config");
+    // this.children.push(new NavigateOperation(config.timeout, config.url));
+    // if (runLogin && config.login.length > 0) {
+    //   this.children.push(
+    //     new StepSeriesOperation(config, "login"),
+    //     new DelayOperation(config.postLoginSleep),
+    //     new NavigateOperation(config.timeout, config.url)
+    //   );
+    // }
+    // if (config.setup.length > 0) {
+    //   this.children.push(new StepSeriesOperation(config, "setup"));
+    // }
+    // if (takeInitialSnapshot && snapshotCb) {
+    //   this.children.push(
+    //     // Make sure we're at step 0 before taking the snapshot.
+    //     new CheckOperation(config.timeout, "loop", 0)
+    //   );
+    //   if (config.postCheckSleep) {
+    //     this.children.push(new DelayOperation(config.postCheckSleep));
+    //   }
+    //   this.children.push(
+    //     new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
+    //   );
+    // }
+
     for (let i = 0; i < iterations; i++) {
       this.children.push(
-        new StepSeriesOperation(config, "loop"),
+        new ParentCallStepSeriesOperation(config, "loop"),
         // Make sure we're at step 0 before taking the snapshot.
-        new CheckOperation(config.timeout, "loop", 0)
+        // new CheckOperation(config.timeout, "loop", 0)
       );
       if (config.postCheckSleep) {
         this.children.push(new DelayOperation(config.postCheckSleep));
@@ -344,6 +401,8 @@ class FindLeaks extends CompositeOperation {
     private _flushResults: (results: BLeakResults) => void
   ) {
     super();
+
+    console.log("[DEBUG] FindLeaks constructor");
     this.children.push(
       //   new ConfigureProxyOperation({
       //     log: NopLog,
@@ -378,6 +437,9 @@ class FindLeaks extends CompositeOperation {
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
+    console.log("[DEBUG] FindLeaks _run");
+    // await wait(20000);
+    // console.log("=============== wait ===============");
     return opSt.progressBar.timeEvent(
       OperationType.LEAK_IDENTIFICATION_AND_RANKING,
       async () => {
@@ -427,6 +489,7 @@ class GetGrowthStacksOperation extends Operation {
 class DiagnoseLeaks extends CompositeOperation {
   constructor(config: BLeakConfig, isLoggedIn: boolean) {
     super();
+    console.log("[DEBUG] in DiagnoseLeaks");
     this.children.push(
       //   new ConfigureProxyOperation({
       //     log: NopLog,
@@ -728,10 +791,10 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      new DiagnoseLeaks(config, true)
+      // new DiagnoseLeaks(config, true)
     );
   }
   public get description() {
-    return "Locating and diagnosing leaks";
+    return "Locating and diagnosing leaks\n";
   }
 }

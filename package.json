@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon",
     "test:driver": "npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example",
+    "test:find-leaks": "rm -rf build && npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -29,6 +30,7 @@
     "@types/chrome-remote-interface": "^0.31.4",
     "@types/esprima": "^4.0.3",
     "@types/node": "^18.7.23",
+    "@types/node-fetch": "^2.6.2",
     "@types/progress": "^2.0.5",
     "@types/yargs": "^17.0.13",
     "nodemon": "^2.0.20",
@@ -39,6 +41,7 @@
     "chrome-remote-interface": "^0.31.3",
     "error-stack-parser": "^2.1.4",
     "esprima": "^4.0.1",
+    "node-fetch": "^2.6.6",
     "progress": "^2.0.3",
     "yargs": "^17.6.0"
   }

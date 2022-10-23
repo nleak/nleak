@@ -1,13 +1,14 @@
 import repl from "repl";
 import fs from "fs";
-import { setTimeout } from "timers/promises";
 import { parseScript as parseJavaScript } from "esprima";
 import childProcess from "child_process";
 import cdp from "chrome-remote-interface";
+import fetch from 'node-fetch';
 
 import HeapSnapshotParser from "../lib/heap_snapshot_parser";
 import { Log, IDriver } from "../common/interfaces";
 import { wait } from "../common/util";
+import BLeakConfig from "./config";
 
 interface ChildProcessResponse {
   _process: childProcess.ChildProcess;
@@ -15,7 +16,7 @@ interface ChildProcessResponse {
 }
 
 async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
-  return new Promise(function (resolve, reject) {
+  return new Promise(async function (resolve, reject) {
     let _process: childProcess.ChildProcess;
     let _debugger: cdp.Client;
 
@@ -41,6 +42,9 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
       _process.stdout.on("data", (data) => {
         console.log(`PID[${_process.pid}] stdout: ${data}`);
       });
+      _process.on("error", (err) => {
+        console.log(`PID[${_process.pid}] error: ${err}`);
+      });
       _process.on("close", (code) => {
         console.log(
           `PID[${_process.pid}] child process close all stdio with code ${code}`
@@ -58,6 +62,10 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
   });
 }
 
+function exceptionDetailsToString(e: any): string {
+  return `${e.url}:${e.lineNumber}:${e.columnNumber} ${e.text} ${e.exception ? e.exception.description : ""}\n${e.stackTrace ? e.stackTrace.description : ""}\n  ${e.stackTrace ? e.stackTrace.callFrames.filter((f: { url: string; }) => f.url !== "").map((f: { functionName: any; url: any; lineNumber: any; columnNumber: any; }) => `${f.functionName ? `${f.functionName} at ` : ""}${f.url}:${f.lineNumber}:${f.columnNumber}`).join("\n  ") : ""}\n`;
+}
+
 export default class NodeDriver implements IDriver {
   public static async Launch(
     log: Log,
@@ -66,7 +74,7 @@ export default class NodeDriver implements IDriver {
   ): Promise<NodeDriver> {
     // TODO: change hardcoded path to be passed from method params
     const path =
-      "/Users/chenxizh/workspace/practium/leakscope/test/example/sample_app.js";
+      "/Users/chenxizh/workspace/practium/nleak/test/example/sample_app.js";
     const { _process, _debugger } = await runUserProcess(path);
 
     const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
@@ -117,30 +125,38 @@ export default class NodeDriver implements IDriver {
     return driver;
   }
 
+  public async callEndpoint<T>(
+    config: BLeakConfig,
+    id: number
+  ): Promise<void> {
+    const endpoint = config.loop[id].endpoint;
+    console.log( "[DEBUG node_driver] callEndpoint()", endpoint);
+    fetch(endpoint)
+      .then((res: any) => res.text())
+      .then((text: any) => console.log("[DEBUG node_driver] fetch result", text));
+    return;
+  }
+
   public async runCode<T>(expression: string): Promise<T> {
-    // const e = await this._runtime.evaluate({ expression, returnByValue: true });
-    // this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
-    // if (e.exceptionDetails) {
-    //   return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
-    // }
-    // return e.result.value;
-    console.log(
-      "[DEBUG node_driver] runCode<T> need implementation to run: ",
-      expression
-    );
-    return new Promise<T>(() => {});
+    // following is the implementation of runCode in the child process
+    console.log( "[DEBUG node_driver] runCode: ", expression);
+    const e = await this._debugger.Runtime.evaluate({ expression, returnByValue: true });
+    this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
+    if (e.exceptionDetails) {
+      console.log("exceptionDetails: ", e.exceptionDetails);
+      return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
+    }
+    console.log("e.result.value: ", e.result.value);
+    return e.result.value;
   }
 
   public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {
     console.log("in takeHeapSnapshot");
     const parser = new HeapSnapshotParser();
-    let count = 1;
 
     // 200 KB chunks
     this._debugger.HeapProfiler.on("addHeapSnapshotChunk", (evt) => {
       fs.writeFileSync("data.heap", JSON.stringify(evt.chunk));
-      console.log(`add No.${count} 200KB chunk`);
-      count++;
       parser.addSnapshotChunk(evt.chunk);
     });
 
