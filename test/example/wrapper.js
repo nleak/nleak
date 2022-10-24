@@ -1,17 +1,69 @@
-//after canchen/wenting done their parts, theyll change rewritingOn
-//runnable nodejs script which will call the sample_app.js
-//export funcs from sample_app.js
+const express = require('express');
+const bodyParser = require('body-parser');
 
-import { leaking } from './sample_app';
+const NoteManager = require('./notes');
 
-//issues: path, wrapper, config
-
-const { boolean } = require('yargs');
-const agent = require('./agent');
-
-var rewritingOn = new Boolean(false);
-const app = rewritingOn ? own_require(sample.app) : require(sample.app);
-
-for(let i=0;i<10;i++){
-	leaking();
+class TestTargetState {
+  constructor() {
+    this.noteManager = new NoteManager();
+    this.iterations = 8;
+    const noteManager = this.noteManager;
+    this.loop = [{
+      name: "add note",
+      check: function (args) {
+        return { synced: true }
+      },
+      next: function (args) {
+        const noteId = noteManager.addNote("test note content");
+        return { noteId };
+      }
+    }, {
+      name: "get note",
+      check: function (args) {
+        return { synced: true }
+      },
+      next: function (args) {
+        const note = noteManager.getNote(args.noteId);
+        return { note };
+      }
+    }, {
+      name: "delete note",
+      check: function (args) {
+        return { synced: true }
+      },
+      next: function (args) {
+        noteManager.deleteNote(args.noteId);
+      }
+    }]
+  }
 }
+
+const testTargetState = new TestTargetState();
+
+const app = express();
+const port = 6701;
+app.use(bodyParser.json());
+
+app.use(bodyParser.json());
+
+app.get("/loop/steps", (request, response) => {
+  response.json({ steps: testTargetState.loop.length });
+});
+
+app.get("/loop/iterations", (request, response) => {
+  response.json({ iterations: testTargetState.iterations });
+});
+
+app.post("/loop/:stepIndex/:operationName", (request, response) => {
+  if (request.params.operationName === "check") {
+    response.json(testTargetState.loop[parseInt(request.params.stepIndex)].check(request.body.args));
+  } else if (request.params.operationName === "next") {
+    response.json(testTargetState.loop[parseInt(request.params.stepIndex)].next(request.body.args));
+  } else {
+    response.status(404).send();
+  }
+});
+
+app.listen(port, () => {
+  console.log(`nleak wrapper port listening at http://localhost:${port}`);
+});
