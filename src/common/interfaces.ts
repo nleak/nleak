@@ -65,6 +65,7 @@ export type StepType = "setup" | "loop";
  * A stage in an application loop.
  */
 export interface Step  {
+  endpoint?: string;
   // Return 'true' if the program has finished loading the current state
   check: () => boolean;
   // Transitions to the next step.
