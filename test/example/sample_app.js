@@ -3,13 +3,16 @@ const http = require('http');
 const hostname = '127.0.0.1';
 const port = 2333;
 
+//add callable methods by other script aka wrapper.js
+
 var obj = {};
 var power = 2;
-function leaking() {
+export function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
         obj[Math.random()] = Math.random();
+		console.log("in loop");
     }
     console.log("memory leaking...");
 }

@@ -4,20 +4,21 @@ const DEFAULT_CONFIG: IBLeakConfig = {
   iterations: 8,
   rankingEvaluationIterations: 10,
   rankingEvaluationRuns: 5,
-  url: "http://localhost:8080/",
-  fixedLeaks: [],
-  fixMap: {},
-  login: [],
+  url: "http://localhost:8080/", //non-url: nodejs script? 
+  fixedLeaks: [], //explore
+  fixMap: {}, //explore
+//   login: [], //for browser, not needed
   setup: [],
-  loop: [],
-  postCheckSleep: 1000,
-  postNextSleep: 0,
-  postLoginSleep: 5000,
+  loop: [], //array of steps
+//   postCheckSleep: 1000, //no need for now
+//   postNextSleep: 0,
+//   postLoginSleep: 5000,
   timeout: 10 * 60 * 1000, // 10 minutes
-  rewrite: (url, type, data, fixes) => data,
+  rewrite: (url, type, data, fixes) => data, //discuss the input of rewrite func
 };
 const DEFAULT_CONFIG_STRING = JSON.stringify(DEFAULT_CONFIG);
 
+//return bleak config
 function getConfigFromSource(configSource: string): IBLeakConfig {
   const m = { exports: {} };
   // CommonJS emulation
@@ -66,13 +67,13 @@ export default class BLeakConfig implements IBLeakConfig {
     checkNumber("rankingEvaluationIterations", raw.rankingEvaluationIterations);
     checkNumber("rankingEvaluationRuns", raw.rankingEvaluationRuns);
     raw.fixedLeaks.forEach((n, i) => checkNumber(`fixedLeaks[${i}]`, n));
-    raw.login.forEach((s, i) => checkStep("login", i, s));
+    // raw.login.forEach((s, i) => checkStep("login", i, s));
     raw.setup.forEach((s, i) => checkStep("setup", i, s));
     checkNumber("timeout", raw.timeout);
     checkFunction("rewrite", raw.rewrite);
-    checkNumber("postCheckSleep", raw.postCheckSleep);
-    checkNumber("postNextSleep", raw.postNextSleep);
-    checkNumber("postLoginSleep", raw.postLoginSleep);
+    // checkNumber("postCheckSleep", raw.postCheckSleep);
+    // checkNumber("postNextSleep", raw.postNextSleep);
+    // checkNumber("postLoginSleep", raw.postLoginSleep);
     return new BLeakConfig(raw, configSource);
   }
 
@@ -83,12 +84,12 @@ export default class BLeakConfig implements IBLeakConfig {
   public readonly rankingEvaluationRuns: number;
   public readonly fixedLeaks: number[];
   public readonly fixMap: { [leakRoot: string]: number };
-  public readonly login: Step[];
+//   public readonly login: Step[];
   public readonly setup: Step[];
   public readonly timeout: number;
-  public readonly postCheckSleep: number;
-  public readonly postNextSleep: number;
-  public readonly postLoginSleep: number;
+//   public readonly postCheckSleep: number;
+//   public readonly postNextSleep: number;
+//   public readonly postLoginSleep: number;
   public readonly rewrite: (
     url: string,
     type: string,
@@ -107,13 +108,13 @@ export default class BLeakConfig implements IBLeakConfig {
     this.rankingEvaluationRuns = raw.rankingEvaluationRuns;
     this.fixedLeaks = raw.fixedLeaks;
     this.fixMap = raw.fixMap;
-    this.login = raw.login;
+    // this.login = raw.login;
     this.setup = raw.setup;
     this.timeout = raw.timeout;
     this.rewrite = raw.rewrite;
-    this.postCheckSleep = raw.postCheckSleep;
-    this.postNextSleep = raw.postNextSleep;
-    this.postLoginSleep = raw.postLoginSleep;
+    // this.postCheckSleep = raw.postCheckSleep;
+    // this.postNextSleep = raw.postNextSleep;
+    // this.postLoginSleep = raw.postLoginSleep;
   }
 
   public getBrowserInjection(): string {

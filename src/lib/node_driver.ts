@@ -5,6 +5,8 @@ import childProcess from "child_process";
 import cdp from "chrome-remote-interface";
 import fetch from 'node-fetch';
 
+//import config here
+
 import HeapSnapshotParser from "../lib/heap_snapshot_parser";
 import { Log, IDriver } from "../common/interfaces";
 import { wait } from "../common/util";
@@ -70,11 +72,11 @@ export default class NodeDriver implements IDriver {
   public static async Launch(
     log: Log,
     interceptPaths: string[] = [],
-    quiet: boolean = true
+    quiet: boolean = true,
+	configpath: string = "",
   ): Promise<NodeDriver> {
-    // TODO: change hardcoded path to be passed from method params
-    const path =
-      "/Users/chenxizh/workspace/practium/nleak/test/example/sample_app.js";
+    const path = configpath;
+
     const { _process, _debugger } = await runUserProcess(path);
 
     const driver = new NodeDriver(log, interceptPaths, _process, _debugger);

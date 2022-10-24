@@ -279,13 +279,13 @@ class StepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
     this.children.push(new CheckOperation(config.timeout, stepType, id));
-    if (config.postCheckSleep) {
-      this.children.push(new DelayOperation(config.postCheckSleep));
-    }
+    // if (config.postCheckSleep) {
+    //   this.children.push(new DelayOperation(config.postCheckSleep));
+    // }
     this.children.push(new NextOperation(config.timeout, stepType, id));
-    if (config.postNextSleep) {
-      this.children.push(new DelayOperation(config.postNextSleep));
-    }
+    // if (config.postNextSleep) {
+    //   this.children.push(new DelayOperation(config.postNextSleep));
+    // }
   }
 
   public get description() {
@@ -345,6 +345,7 @@ class ProgramRunOperation extends CompositeOperation {
     snapshotCb?: SnapshotCb
   ) {
     super();
+
     console.log("[DEBUG] in ProgramRunOperation config");
     // this.children.push(new NavigateOperation(config.timeout, config.url));
     // if (runLogin && config.login.length > 0) {
@@ -354,6 +355,7 @@ class ProgramRunOperation extends CompositeOperation {
     //     new NavigateOperation(config.timeout, config.url)
     //   );
     // }
+
     // if (config.setup.length > 0) {
     //   this.children.push(new StepSeriesOperation(config, "setup"));
     // }
@@ -376,9 +378,9 @@ class ProgramRunOperation extends CompositeOperation {
         // Make sure we're at step 0 before taking the snapshot.
         // new CheckOperation(config.timeout, "loop", 0)
       );
-      if (config.postCheckSleep) {
-        this.children.push(new DelayOperation(config.postCheckSleep));
-      }
+    //   if (config.postCheckSleep) {
+    //     this.children.push(new DelayOperation(config.postCheckSleep));
+    //   }
       if (snapshotCb) {
         this.children.push(
           new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
@@ -738,21 +740,21 @@ export class EvaluateRankingMetricsOperation extends CompositeOperation {
       configs.push(config);
     });
     // Now we can make these run!
-    if (config.login) {
-      this.children.push(
-        // new ConfigureProxyOperation({
-        //   log: NopLog,
-        //   rewrite: false,
-        //   fixes: [],
-        //   disableAllRewrites: true,
-        //   fixRewriteFunction: config.rewrite,
-        //   config: config.getBrowserInjection()
-        // }),
-        new NavigateOperation(config.timeout, config.url),
-        new StepSeriesOperation(config, "login"),
-        new DelayOperation(config.postLoginSleep)
-      );
-    }
+    // if (config.login) {
+    //   this.children.push(
+    //     // new ConfigureProxyOperation({
+    //     //   log: NopLog,
+    //     //   rewrite: false,
+    //     //   fixes: [],
+    //     //   disableAllRewrites: true,
+    //     //   fixRewriteFunction: config.rewrite,
+    //     //   config: config.getBrowserInjection()
+    //     // }),
+    //     new NavigateOperation(config.timeout, config.url),
+    //     new StepSeriesOperation(config, "login"),
+    //     new DelayOperation(config.postLoginSleep)
+    //   );
+    // }
     for (const rankingConfig of configs) {
       for (let i = 0; i < config.rankingEvaluationRuns; i++) {
         this.children.push(
