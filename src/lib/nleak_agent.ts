@@ -12,16 +12,7 @@ interface Function {
   __scope__: Scope;
 }
 
-interface MirrorNode {
-  root: Node;
-  childNodes: ChildNodes;
-}
-
-interface ChildNodes {
-  [p: string]: MirrorNode | number;
-  length: number;
-}
-
+//TODO name of the interface should be Global?
 interface Window {
   $$$INSTRUMENT_PATHS$$$(p: IPathTrees): void;
   $$$GET_STACK_TRACES$$$(): GrowingStackTraces;
@@ -41,20 +32,7 @@ interface Window {
   $$$FUNCTION_EXPRESSION$$$(fcn: Function, scope: Scope): Function;
   $$$OBJECT_EXPRESSION$$$(obj: object, scope: Scope): object;
   $$$CREATE_WITH_SCOPE$$$(withObj: Object, scope: Scope): Scope;
-  $$$SERIALIZE_DOM$$$(): void;
-  $$$DOM$$$: MirrorNode;
   $$$OBJECT$$$: typeof Object;
-}
-
-interface ListenerInfo {
-  useCapture: boolean | object;
-  listener: EventListenerOrEventListenerObject;
-}
-
-interface EventTarget {
-  $$listeners?: { [type: string]: ListenerInfo[] };
-  // Note: Needs to be a string so it shows up in the snapshot.
-  $$id?: string;
 }
 
 interface NodeList {
@@ -79,10 +57,11 @@ declare function importScripts(s: string): void;
  * Agent injected into the webpage to surface browser-hidden leaks at the JS level.
  */
 (function() {
-  // Global variables.
+  //TODO Global variables.
   const IS_WINDOW = typeof window !== "undefined";
   const IS_WORKER = typeof importScripts !== "undefined";
   const ROOT = <Window>(IS_WINDOW ? window : IS_WORKER ? self : global);
+  // const ROOT = <Global>NodeJS.Global;
   // Avoid installing self twice.
   if (ROOT.$$$INSTRUMENT_PATHS$$$) {
     return;
@@ -100,13 +79,12 @@ declare function importScripts(s: string): void;
   ROOT.$$$FUNCTION_EXPRESSION$$$ = $$$FUNCTION_EXPRESSION$$$;
   ROOT.$$$OBJECT_EXPRESSION$$$ = $$$OBJECT_EXPRESSION$$$;
   ROOT.$$$CREATE_WITH_SCOPE$$$ = $$$CREATE_WITH_SCOPE$$$;
-  ROOT.$$$SERIALIZE_DOM$$$ = $$$SERIALIZE_DOM$$$;
   // Some programs define local variables named 'Object'.
   ROOT.$$$OBJECT$$$ = Object;
 
   const r = /'/g;
   // Some websites overwrite console.log, so grab a reference for debug logging.
-  const console = ROOT.console ? ROOT.console : { log: (str: string) => {} };
+  //const console = ROOT.console ? ROOT.console : { log: (str: string) => {} };
   const consoleLog = console.log;
   function logToConsole(s: string) {
     consoleLog.call(console, s);
@@ -405,40 +383,6 @@ declare function importScripts(s: string): void;
       }
     }
     return obj;
-  }
-
-  // Used to store child nodes as properties on an object rather than in an array to facilitate
-  // leak detection.
-  const NODE_PROP_PREFIX = "$$$CHILD$$$";
-  /**
-   * Converts the node's tree structure into a JavaScript-visible tree structure.
-   * TODO: Mutate to include any other Node properties that could be the source of leaks!
-   * @param n
-   */
-  function makeMirrorNode(n: Node): MirrorNode {
-    const childNodes = n.childNodes;
-    const m: MirrorNode = { root: n, childNodes: makeChildNode(childNodes) };
-    return m;
-  }
-
-  /**
-   * Converts the childNodes nodelist into a JS-level object.
-   * @param cn
-   */
-  function makeChildNode(cn: NodeList): ChildNodes {
-    const numChildren = cn.length;
-    let rv: ChildNodes = { length: numChildren };
-    for (let i = 0; i < numChildren; i++) {
-      rv[`${NODE_PROP_PREFIX}${i}`] = makeMirrorNode(cn[i]);
-    }
-    return rv;
-  }
-
-  /**
-   * Serializes the DOM into a JavaScript-visible tree structure.
-   */
-  function $$$SERIALIZE_DOM$$$(n: Node = document): void {
-    ROOT.$$$DOM$$$ = makeMirrorNode(document);
   }
 
   /**
@@ -777,77 +721,6 @@ declare function importScripts(s: string): void;
     }
   }
 
-  function instrumentDOMTree(
-    rootAccessString: string,
-    root: any,
-    tree: IPathTree,
-    stackTrace: string = null
-  ): void {
-    // For now: Simply crawl to the node(s) and instrument regularly from there. Don't try to plant getters/setters.
-    // $$DOM - - - - - -> root [regular subtree]
-    let obj: any;
-    let accessString = rootAccessString;
-    let switchToRegularTree = false;
-    switch (tree.indexOrName) {
-      case "$$$DOM$$$":
-        obj = document;
-        accessString = "document";
-        break;
-      case "root":
-        switchToRegularTree = true;
-        obj = root;
-        break;
-      case "childNodes":
-        obj = root["childNodes"];
-        accessString += `['childNodes']`;
-        break;
-      default:
-        const modIndex = (<string>tree.indexOrName).slice(
-          NODE_PROP_PREFIX.length
-        );
-        obj = root[modIndex];
-        accessString += `[${modIndex}]`;
-        break;
-    }
-
-    if (!obj) {
-      return;
-    }
-
-    if (obj && !obj.$$$TREE$$$) {
-      Object.defineProperties(obj, {
-        $$$TREE$$$: {
-          value: null,
-          writable: true,
-          configurable: true
-        },
-        $$$ACCESS_STRING$$$: {
-          value: null,
-          writable: true,
-          configurable: true
-        }
-      });
-    }
-    obj.$$$TREE$$$ = tree;
-    obj.$$$ACCESS_STRING$$$ = accessString;
-    if (tree.isGrowing) {
-      getProxy(accessString, obj, stackTrace);
-    }
-
-    // Capture writes of children.
-    const children = tree.children;
-    if (children) {
-      const instrumentFunction = switchToRegularTree
-        ? instrumentTree
-        : instrumentDOMTree;
-      const len = children.length;
-      for (let i = 0; i < len; i++) {
-        const child = children[i];
-        instrumentFunction(accessString, obj, child, stackTrace);
-      }
-    }
-  }
-
   function instrumentTree(
     rootAccessString: string,
     root: any,
@@ -879,18 +752,10 @@ declare function importScripts(s: string): void;
   // Disables proxy interception.
   let disableProxies = false;
 
-  function isDOMRoot(tree: IPathTree): boolean {
-    return tree.indexOrName === "$$$DOM$$$";
-  }
-
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
     for (const tree of trees) {
-      if (isDOMRoot(tree)) {
-        instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
-      } else {
         instrumentTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
-      }
     }
     instrumentedTrees = instrumentedTrees.concat(trees);
   }
@@ -922,65 +787,10 @@ declare function importScripts(s: string): void;
     }
   }
 
-  function getDOMStackTraces(
-    root: any,
-    path: IPathTree,
-    stacksMap: { [id: number]: Set<string> }
-  ): void {
-    let obj: any;
-    let switchToRegularTree = false;
-    switch (path.indexOrName) {
-      case "$$$DOM$$$":
-        obj = document;
-        break;
-      case "root":
-        switchToRegularTree = true;
-        obj = root;
-        break;
-      case "childNodes":
-        obj = root[path.indexOrName];
-        break;
-      default:
-        obj = root[(<string>path.indexOrName).slice(NODE_PROP_PREFIX.length)];
-        break;
-    }
-
-    if (isProxyable(obj) && path.isGrowing) {
-      const wrappedObj = wrapIfOriginal(obj);
-      if (getProxyStatus(wrappedObj) === ProxyStatus.IS_PROXY) {
-        const map = getProxyStackTraces(wrappedObj);
-        const stackTraces = stacksMap[path.id]
-          ? stacksMap[path.id]
-          : new Set<string>();
-        map.forEach((v, k) => {
-          v.forEach(s => stackTraces.add(s));
-        });
-        stacksMap[path.id] = stackTraces;
-      }
-    }
-
-    // Capture writes of children.
-    const children = path.children;
-    const getStackTracesFunction = switchToRegularTree
-      ? getStackTraces
-      : getDOMStackTraces;
-    if (children) {
-      const len = children.length;
-      for (let i = 0; i < len; i++) {
-        const child = children[i];
-        getStackTracesFunction(obj, child, stacksMap);
-      }
-    }
-  }
-
   function $$$GET_STACK_TRACES$$$(): GrowingStackTraces {
     const stacksMap: { [id: number]: Set<string> } = {};
     for (const tree of instrumentedTrees) {
-      if (isDOMRoot(tree)) {
-        getDOMStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
-      } else {
         getStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
-      }
     }
     const jsonableStacksMap: GrowingStackTraces = {};
     for (const stringId in stacksMap) {
@@ -1012,67 +822,6 @@ declare function importScripts(s: string): void;
     Document.prototype.writeln = function(this: Document, str: string): void {
       return this.write(str);
     };*/
-
-    const addEventListener = EventTarget.prototype.addEventListener;
-    const removeEventListener = EventTarget.prototype.removeEventListener;
-    EventTarget.prototype.addEventListener = function(
-      this: EventTarget,
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      useCapture: boolean = false
-    ) {
-      addEventListener.apply(unwrapIfProxy(this), arguments);
-      if (!this.$$listeners) {
-        this.$$listeners = {};
-      }
-      let listeners = this.$$listeners[type];
-      if (!listeners) {
-        listeners = this.$$listeners[type] = [];
-      }
-      for (const listenerInfo of listeners) {
-        if (
-          listenerInfo.listener === listener &&
-          (typeof listenerInfo.useCapture === "boolean"
-            ? listenerInfo.useCapture === useCapture
-            : true)
-        ) {
-          return;
-        }
-      }
-      listeners.push({
-        listener: listener,
-        useCapture: useCapture
-      });
-    };
-
-    EventTarget.prototype.removeEventListener = function(
-      this: EventTarget,
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      useCapture: boolean | object = false
-    ) {
-      removeEventListener.apply(unwrapIfProxy(this), arguments);
-      if (this.$$listeners) {
-        const listeners = this.$$listeners[type];
-        if (listeners) {
-          for (let i = 0; i < listeners.length; i++) {
-            const lInfo = listeners[i];
-            if (
-              lInfo.listener === listener &&
-              (typeof lInfo.useCapture === "boolean"
-                ? lInfo.useCapture === useCapture
-                : true)
-            ) {
-              listeners.splice(i, 1);
-              if (listeners.length === 0) {
-                delete this.$$listeners[type];
-              }
-              return;
-            }
-          }
-        }
-      }
-    };
 
     // Array modeling
     Array.prototype.push = (function(push) {
@@ -1394,54 +1143,6 @@ declare function importScripts(s: string): void;
     }
 
     if (IS_WINDOW) {
-      [
-        Document.prototype,
-        Element.prototype,
-        MediaQueryList.prototype,
-        FileReader.prototype,
-        HTMLBodyElement.prototype,
-        HTMLElement.prototype,
-        HTMLFrameSetElement.prototype,
-        ApplicationCache.prototype, //EventSource.prototype, SVGAnimationElement.prototype,
-        SVGElement.prototype,
-        XMLHttpRequest.prototype, //XMLHttpRequestEventTarget.prototype,
-        WebSocket.prototype,
-        IDBDatabase.prototype,
-        IDBOpenDBRequest.prototype,
-        IDBRequest.prototype,
-        IDBTransaction.prototype,
-        window
-      ].forEach(obj => {
-        Object.keys(obj)
-          .filter(p => p.startsWith("on"))
-          .forEach(p => {
-            interpositionEventListenerProperty(obj, p);
-          });
-      });
-
-      [
-        [Node.prototype, "Node"],
-        [Element.prototype, "Element"],
-        [HTMLElement.prototype, "HTMLElement"],
-        [Document.prototype, "Document"],
-        [HTMLCanvasElement.prototype, "HTMLCanvasElement"],
-        [NodeList.prototype, "NodeList"]
-      ].forEach(v =>
-        Object.keys(v[0]).forEach(k =>
-          proxyInterposition(v[0], k, `${v[1]}.${k}`)
-        )
-      );
-
-      const $$$REINSTRUMENT$$$ = function(this: Node | NodeList): void {
-        if (this.$$$TREE$$$) {
-          instrumentDOMTree(
-            this.$$$ACCESS_STRING$$$,
-            this,
-            this.$$$TREE$$$,
-            _getStackTrace()
-          );
-        }
-      };
       Object.defineProperty(Node.prototype, "$$$REINSTRUMENT$$$", {
         value: $$$REINSTRUMENT$$$,
         configurable: true
@@ -1676,161 +1377,6 @@ declare function importScripts(s: string): void;
         configurable: true,
         enumerable: true
       });
-
-      const outerHTML = Object.getOwnPropertyDescriptor(
-        Element.prototype,
-        "outerHTML"
-      );
-      Object.defineProperty(Element.prototype, "outerHTML", {
-        get: outerHTML.get,
-        set: function(this: Element, v: string): boolean {
-          const parent = this.parentNode;
-          if (parent) {
-            const parentCn = parent.childNodes;
-            if (getProxyStatus(parentCn) === ProxyStatus.IS_PROXY) {
-              const len = parentCn.length;
-              let i = 0;
-              for (; i < len; i++) {
-                if (parentCn[i] === this) {
-                  break;
-                }
-              }
-              if (i === len) {
-                logToConsole(`Invalid call to outerHTML: Detached node?`);
-              } else {
-                const stacks = getProxyStackTraces(parentCn);
-                _removeStacks(stacks, `${i}`);
-                _addStackTrace(stacks, `${i}`);
-              }
-            }
-          }
-          const rv = outerHTML.set.call(this, v);
-          if (parent) {
-            parent.childNodes.$$$REINSTRUMENT$$$();
-          }
-          return rv;
-        },
-        configurable: true,
-        enumerable: true
-      });
-
-      function insertAdjacentHelper(
-        e: Element,
-        position: InsertPosition
-      ): void {
-        switch (position) {
-          case "beforebegin":
-          case "afterend": {
-            if (
-              e.parentNode &&
-              getProxyStatus(e.parentNode.childNodes) === ProxyStatus.IS_PROXY
-            ) {
-              const parent = e.parentNode;
-              const siblings = parent.childNodes;
-              const numSiblings = siblings.length;
-              let i = 0;
-              for (; i < numSiblings; i++) {
-                if ($$$SEQ$$$(siblings[i], e)) {
-                  break;
-                }
-              }
-              if (i !== numSiblings) {
-                // Does it shift things down before or after this element?
-                let start = position === "beforebegin" ? i : i + 1;
-                const stacks = getProxyStackTraces(siblings);
-                for (i = numSiblings - 1; i >= start; i--) {
-                  _copyStacks(stacks, `${i}`, `${i + 1}`);
-                }
-                _removeStacks(stacks, `${start}`);
-                _addStackTrace(stacks, `${start}`);
-              }
-            }
-            break;
-          }
-          case "afterbegin":
-          case "beforeend": {
-            const cn = e.childNodes;
-            if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-              const numChildren = cn.length;
-              const stacks = getProxyStackTraces(cn);
-              if (position === "afterbegin") {
-                for (let i = numChildren - 1; i >= 0; i--) {
-                  _copyStacks(stacks, `${i}`, `${i + 1}`);
-                }
-                _removeStacks(stacks, `0`);
-                _addStackTrace(stacks, `0`);
-              } else {
-                _addStackTrace(stacks, `${numChildren}`);
-              }
-            }
-            break;
-          }
-        }
-      }
-
-      const insertAdjacentElement = Element.prototype.insertAdjacentElement;
-      Element.prototype.insertAdjacentElement = function(
-        position: InsertPosition,
-        insertedElement: Element
-      ): Element {
-        /**
-         * The insertAdjacentElement() method inserts a given element node at a given
-         * position relative to the element it is invoked upon.
-         */
-        insertAdjacentHelper(this, position);
-
-        const rv = insertAdjacentElement.call(this, position, insertedElement);
-        if (position === "afterbegin" || position === "beforeend") {
-          this.childNodes.$$$REINSTRUMENT$$$();
-        } else if (this.parentNode) {
-          this.parentNode.childNodes.$$$REINSTRUMENT$$$();
-        }
-        return rv;
-      };
-
-      const insertAdjacentHTML = Element.prototype.insertAdjacentHTML;
-      Element.prototype.insertAdjacentHTML = function(
-        this: Element,
-        where: InsertPosition,
-        html: string
-      ): void {
-        insertAdjacentHelper(this, where);
-        const rv = insertAdjacentHTML.call(this, where, html);
-        if (where === "afterbegin" || where === "beforeend") {
-          this.childNodes.$$$REINSTRUMENT$$$();
-        } else if (this.parentNode) {
-          this.parentNode.childNodes.$$$REINSTRUMENT$$$();
-        }
-        return rv;
-      };
-
-      const insertAdjacentText = Element.prototype.insertAdjacentText;
-      Element.prototype.insertAdjacentText = function(
-        this: Element,
-        where: InsertPosition,
-        text: string
-      ): void {
-        insertAdjacentHelper(this, where);
-        const rv = insertAdjacentText.call(this, where, text);
-        if (where === "afterbegin" || where === "beforeend") {
-          this.childNodes.$$$REINSTRUMENT$$$();
-        } else if (this.parentNode) {
-          this.parentNode.childNodes.$$$REINSTRUMENT$$$();
-        }
-        return rv;
-      };
-
-      const remove = Element.prototype.remove;
-      Element.prototype.remove = function(this: Element): void {
-        const parent = this.parentNode;
-        if (parent) {
-          parent.removeChild(this);
-        } else {
-          remove.call(this);
-        }
-      };
-
-      // TODO: Support Element/SVGElement.dataset, which modifies properties on DOM object.
     }
   }
 })();
