@@ -5,6 +5,7 @@ const DEFAULT_CONFIG: IBLeakConfig = {
   rankingEvaluationIterations: 10,
   rankingEvaluationRuns: 5,
   url: "http://localhost:8080/", //non-url: nodejs script? 
+  entry:"",
   fixedLeaks: [], //explore
   fixMap: {}, //explore
 //   login: [], //for browser, not needed
@@ -62,6 +63,7 @@ export default class BLeakConfig implements IBLeakConfig {
     const raw = getConfigFromSource(configSource);
     // Sanity check types.
     checkString("url", raw.url);
+	checkString("entry",raw.entry);
     raw.loop.forEach((s, i) => checkStep("loop", i, s));
     checkNumber("iterations", raw.iterations);
     checkNumber("rankingEvaluationIterations", raw.rankingEvaluationIterations);
@@ -78,6 +80,7 @@ export default class BLeakConfig implements IBLeakConfig {
   }
 
   public readonly url: string;
+  public readonly entry: string;
   public readonly loop: Step[];
   public readonly iterations: number;
   public readonly rankingEvaluationIterations: number;
@@ -102,6 +105,7 @@ export default class BLeakConfig implements IBLeakConfig {
     private readonly _configSource: string
   ) {
     this.url = raw.url;
+	this.entry = raw.entry;
     this.loop = raw.loop;
     this.iterations = raw.iterations;
     this.rankingEvaluationIterations = raw.rankingEvaluationIterations;

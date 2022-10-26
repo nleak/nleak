@@ -73,11 +73,13 @@ export default class NodeDriver implements IDriver {
     log: Log,
     interceptPaths: string[] = [],
     quiet: boolean = true,
-	configpath: string = "",
+	absPath: string = "",
   ): Promise<NodeDriver> {
-    const path = configpath;
-
-    const { _process, _debugger } = await runUserProcess(path);
+    var path = require('path');
+	var ppath = path.resolve('../../../test/example',absPath);
+	console.log(ppath);
+	//TODO: ECONNREFUSED
+    const { _process, _debugger } = await runUserProcess(ppath);
 
     const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
 

@@ -265,9 +265,9 @@ class ParentCallStepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
     this.children.push(new ParentCallNextOperation(config, stepType, id));
-    if (config.postNextSleep) {
-      this.children.push(new DelayOperation(config.postNextSleep));
-    }
+    // if (config.postNextSleep) {
+    //   this.children.push(new DelayOperation(config.postNextSleep));
+    // }
   }
 
   public get description() {

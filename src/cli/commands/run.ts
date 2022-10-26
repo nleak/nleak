@@ -8,6 +8,7 @@ import ProgressProgressBar from "../../lib/progress_bar";
 import BLeakResults from "../../lib/results";
 import NodeDriver from "../../lib/node_driver";
 import TextReporter from "../../lib/text_reporter";
+import BLeakConfig from "../../lib/config";
 
 const Run: CommandModule = {
   command: "run",
@@ -71,8 +72,9 @@ const Run: CommandModule = {
       }
 
       writeFileSync(join(args.out, "config.js"), configFileSource);
-
-      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true, configFileSource);
+	  const configInst = BLeakConfig.FromSource(configFileSource);
+	  //here we should pass the absPath of sample_app.js. 
+      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true, configInst.entry);
 
       // Test driver snippet, need to removed
       await nodeDriver.takeHeapSnapshot();

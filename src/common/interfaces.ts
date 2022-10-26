@@ -24,6 +24,7 @@ export interface IBLeakConfig {
 
   // URL to web page to check for memory leaks.
   url: string;
+  entry: string;
   // Runs your program in a loop. Each step has a "check" function, and a "next" function
   // to transition to the next step in the loop.
   loop: Step[];
