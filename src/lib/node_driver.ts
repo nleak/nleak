@@ -73,11 +73,9 @@ export default class NodeDriver implements IDriver {
     log: Log,
     interceptPaths: string[] = [],
     quiet: boolean = true,
-	configpath: string = "",
+    guestAppEntryPath: string = "",
   ): Promise<NodeDriver> {
-    const path = configpath;
-
-    const { _process, _debugger } = await runUserProcess(path);
+    const { _process, _debugger } = await runUserProcess(guestAppEntryPath);
 
     const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
 
