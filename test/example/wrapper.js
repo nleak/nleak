@@ -2,7 +2,7 @@
 //runnable nodejs script which will call the sample_app.js
 //export funcs from sample_app.js
 
-import { leaking } from './sample_app';
+import { leaking } from './guest_app';
 
 //issues: path, wrapper, config
 
