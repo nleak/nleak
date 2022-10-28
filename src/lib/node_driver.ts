@@ -31,7 +31,9 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
         console.log(
           `PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`
         );
-        _debugger = await cdp({ port: 9229 }); // node's default degging port
+
+        await new Promise(r => setTimeout(r, 2000));
+        _debugger = await cdp({ port: 9229 }); // node's default debugging port
 
         resolve({
           _process: _process,
