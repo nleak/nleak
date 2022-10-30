@@ -10,21 +10,9 @@ exports.loop = [
     endpoint: "http://localhost:2333/leak",
     check: () => {},
     next: () => {},
-  },
-  {
-    name: "2nd Call /leak API",
-    endpoint: "http://localhost:2333/leak",
-    check: () => {},
-    next: () => {},
-  },
-  {
-    name: "3rd Call /leak API",
-    endpoint: "http://localhost:2333/leak",
-    check: () => {},
-    next: () => {},
-  },
+  }
 ];
 exports.timeout = 30000;
-exports.iterations = 3;
+exports.iterations = 2;
 exports.postCheckSleep = 100;
 
