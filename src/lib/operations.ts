@@ -306,11 +306,13 @@ class InstrumentGrowingPathsOperation extends Operation {
     console.log("Entering InstrumentGrowingPathsOperation...\n");
     console.log(JSON.stringify(
       toPathTree(opSt.results.leaks)));
-    return opSt.NodeDriver.runCode<void>(
-      `global.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
-        toPathTree(opSt.results.leaks)
-      )})`
-    );
+    // return dummy null promise
+    return Promise.resolve();
+    // return opSt.NodeDriver.runCode<void>(
+    //   `global.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
+    //     toPathTree(opSt.results.leaks)
+    //   )})`
+    // );
   }
 }
 
@@ -476,6 +478,7 @@ class GetGrowthStacksOperation extends Operation {
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
+    console.log("[DEBUG] in GetGrowthStacksOperation _run")
     return opSt.progressBar.timeEvent(
       OperationType.GET_GROWTH_STACKS,
       async () => {
@@ -527,6 +530,7 @@ class DiagnoseLeaks extends CompositeOperation {
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
+    console.log("[DEBUG] in DiagnoseLeaks _run");
     return opSt.progressBar.timeEvent(
       OperationType.LEAK_DIAGNOSES,
       async () => {
