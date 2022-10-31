@@ -24,6 +24,7 @@ export interface IBLeakConfig {
 
   // URL to web page to check for memory leaks.
   url: string;
+  entry: string;
   // Runs your program in a loop. Each step has a "check" function, and a "next" function
   // to transition to the next step in the loop.
   loop: Step[];
@@ -40,7 +41,7 @@ export interface IBLeakConfig {
   fixedLeaks: number[];
   // Maps leak roots back to distinct leak fixes, identified by their first heap path. Used to evaluate different ranking metrics.
   fixMap: {[leakRoot: string]: number};
-  login: Step[];
+//   login: Step[];
   setup: Step[];
   // How long (in milliseconds) to wait for a step transition to finish before declaring an error.
   // Default: 10 minutes (10 * 60 * 1000)
@@ -49,21 +50,23 @@ export interface IBLeakConfig {
 
   // How long (in milliseconds) to wait between a check() returning 'true' and transitioning to the next step or taking a heap snapshot.
   // Default: 1000
-  postCheckSleep: number;
-  // How long (in milliseconds) to wait between transitioning to the next step and running check() for the first time.
-  // Default: 0
-  postNextSleep: number;
-  // How long (in milliseconds) to wait between submitting login credentials and reloading the page for a run.
-  // Default: 5000
-  postLoginSleep: number;
+//   postCheckSleep: number;
+//   // How long (in milliseconds) to wait between transitioning to the next step and running check() for the first time.
+//   // Default: 0
+//   postNextSleep: number;
+//   // How long (in milliseconds) to wait between submitting login credentials and reloading the page for a run.
+//   // Default: 5000
+//   postLoginSleep: number;
 }
 
-export type StepType = "login" | "setup" | "loop";
+// export type StepType = "login" | "setup" | "loop";
+export type StepType = "setup" | "loop";
 
 /**
  * A stage in an application loop.
  */
 export interface Step  {
+  endpoint?: string;
   // Return 'true' if the program has finished loading the current state
   check: () => boolean;
   // Transitions to the next step.

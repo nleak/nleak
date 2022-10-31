@@ -1,5 +1,5 @@
 import { readFileSync, mkdirSync, existsSync, createWriteStream, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { resolve, join } from "node:path";
 import { createGzip } from "node:zlib";
 import { CommandModule } from "yargs";
 
@@ -8,6 +8,7 @@ import ProgressProgressBar from "../../lib/progress_bar";
 import BLeakResults from "../../lib/results";
 import NodeDriver from "../../lib/node_driver";
 import TextReporter from "../../lib/text_reporter";
+import BLeakConfig from "../../lib/config";
 
 const Run: CommandModule = {
   command: "run",
@@ -21,6 +22,14 @@ const Run: CommandModule = {
         mkdirSync(join(args.out, "snapshots"));
       }
       mkdirSync(join(args.out, "snapshots", "leak_detection"));
+    }
+
+    // resolve guest entry path with current working directory
+    const guestAppEntryPath = resolve(process.cwd(), args["guest-app-entry"]);
+    // check if guest entry path exists
+    if (!existsSync(guestAppEntryPath)) {
+      console.error(`Guest NodeJS app entry path ${guestAppEntryPath} does not exist.`);
+      process.exit(1);
     }
 
     const progressBarLogger = new ProgressProgressBar(
@@ -71,8 +80,8 @@ const Run: CommandModule = {
       }
 
       writeFileSync(join(args.out, "config.js"), configFileSource);
-
-      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true);
+      //here we should pass the absPath of sample_app.js.
+      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true, guestAppEntryPath);
 
       // Test driver snippet, need to removed
       await nodeDriver.takeHeapSnapshot();
@@ -142,7 +151,12 @@ const Run: CommandModule = {
     config: {
       type: "string",
       demand: true,
-      describe: "Configuration file to use with BLeak",
+      describe: "Configuration file to use with NLeak",
+    },
+    "guest-app-entry": {
+      type: "string",
+      demand: true,
+      describe: "Guest NodeJS App entry point for memory debugging"
     },
     snapshot: {
       type: "boolean",
