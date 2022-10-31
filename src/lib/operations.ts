@@ -294,13 +294,20 @@ class StepOperation extends CompositeOperation {
 }
 
 class InstrumentGrowingPathsOperation extends Operation {
+  constructor(_timeout: number = NEVER) {
+    super(_timeout);
+    console.log("[DEBUG] in InstrumentGrowingPathsOperation");
+  }
   public get description() {
     return `Instrumenting growing objects`;
   }
 
   public _run(opSt: OperationState): Promise<void> {
+    console.log("Entering InstrumentGrowingPathsOperation...\n");
+    console.log(JSON.stringify(
+      toPathTree(opSt.results.leaks)));
     return opSt.NodeDriver.runCode<void>(
-      `window.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
+      `global.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
         toPathTree(opSt.results.leaks)
       )})`
     );
@@ -461,6 +468,7 @@ class FindLeaks extends CompositeOperation {
 class GetGrowthStacksOperation extends Operation {
   constructor(timeout: number) {
     super(timeout);
+    console.log("[DEBUG] in GetGrowthStacksOperation")
   }
 
   public get description() {
@@ -474,8 +482,9 @@ class GetGrowthStacksOperation extends Operation {
         const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(
           `window.$$$GET_STACK_TRACES$$$()`
         );
+        console.log("[DEBUG] stack traces", traces);
         // TODO: port growthStacks to NodeJS
-        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+          // const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
           // const stacks = growthStacks[index] || [];
@@ -503,8 +512,8 @@ class DiagnoseLeaks extends CompositeOperation {
       // Warmup
       new ProgramRunOperation(config, !isLoggedIn, 1, false),
       new InstrumentGrowingPathsOperation(config.timeout),
-      new StepSeriesOperation(config, "loop"),
-      new StepSeriesOperation(config, "loop"),
+      // new StepSeriesOperation(config, "loop"),
+      // new StepSeriesOperation(config, "loop"),
       new GetGrowthStacksOperation(config.timeout)
     );
   }
@@ -793,7 +802,7 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      // new DiagnoseLeaks(config, true)
+      new DiagnoseLeaks(config, true)
     );
   }
   public get description() {
