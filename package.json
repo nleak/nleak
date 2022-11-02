@@ -7,7 +7,9 @@
     "dev": "nodemon",
     "test:driver": "npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example",
     "test:find-leaks": "rm -rf build && npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example --guest-app-entry ../../test/example/guest_app.js",
-    "test": "env mocha -r ts-node/register 'test/*.ts'"
+    "test": "npm run test:leak &&  npm run test:no-leak",
+    "test:leak": "env mocha -r ts-node/register 'test/leak_test.ts'",
+    "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'"
   },
   "repository": {
     "type": "git",
