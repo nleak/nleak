@@ -3,7 +3,7 @@ import { test } from "../src/lib/nleak_agent_transform";
 // console.log(test());
 
 const f = Function("F,a", "return new F(a[0])");
-console.log(f.toString());
+//console.log(f.toString());
 // console.log(typeof f);
 
 // console.log(Function.prototype.bind.toString());
