@@ -1,0 +1,428 @@
+# LeakRoots Ranked By LeakShare
+## LeakRoot Ranked 1 [Score: 16086.666666666668]
+
+### GC Paths
+
+* within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of testEnabled within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of emitWarningIfNeeded within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of debuglogImpl within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of util.debug within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 2 [Score: 15470.666666666668]
+
+### GC Paths
+
+* _process within closure of window["get process"]
+* process within closure of window.btoa
+* process within closure of window.queueMicrotask
+* object within closure of window.console["get _stdout"]
+* process within closure of window.console.Console
+* process within closure of require within closure of window.clearImmediate
+* process within closure of Timeout within closure of window.clearImmediate
+* process within closure of destroyHooksExist within closure of window.clearImmediate
+* process within closure of isInsideNodeModules within closure of window.btoa
+* process within closure of isUint8Array within closure of window.btoa
+* process within closure of setHasRejectionToWarn within closure of window.queueMicrotask
+* process within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of _process._startProfilerIdleNotifier within closure of window["get process"]
+* process within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.emitWarning within closure of window["get process"]
+* process within closure of _process._fatalException within closure of window["get process"]
+* process within closure of _process["get config"] within closure of window["get process"]
+* process within closure of _process.hrtime within closure of window["get process"]
+* process within closure of path.resolve within closure of window.URLSearchParams
+* process within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of window.performance.__proto__.__proto__.now
+* process within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of debug within closure of Timeout within closure of window.clearImmediate
+* process within closure of _process._events.removeListener within closure of window["get process"]
+* process within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of clearEntriesFromBuffer within closure of window.performance.__proto__.constructor
+* process within closure of stdout.destroySoon within closure of window.console["get _stdout"]
+* process within closure of timerListMap[808]._idleNext._onTimeout within closure of window.clearImmediate
+* process within closure of getOptionValue within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of normalizeReferrerURL within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of handleProcessExit within closure of _process.hrtime within closure of window["get process"]
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.Transform within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.finished within closure of window.MessageEvent
+* process within closure of from within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.Stats within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.opendirSync within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of report["get reportOnSignal"] within closure of _process["get report"] within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor.runMain within closure of window["get process"]
+* process within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of util._extend within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of ReadFileContext within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of vm.createContext within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of asyncESM.initializeImportMetaObject within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of freeParser within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.lookup within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.Resolver within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of watchers.FSWatcher within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of defaultGetFormatWithoutErrors within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dgram.createSocket within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 3 [Score: 1192]
+
+### GC Paths
+
+* execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+* async_wrap.execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 4 [Score: 360]
+
+### GC Paths
+
+* ERR_STREAM_DESTROYED within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* codes.ERR_STREAM_DESTROYED within closure of isStackOverflowError within closure of window.console.Console
+* ERR_STREAM_DESTROYED within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED.prototype.constructor within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 5 [Score: 106.66666666666666]
+
+### GC Paths
+
+* timerListMap within closure of window.clearImmediate
+* timerListMap within closure of Timeout within closure of window.clearImmediate
+* internalTimers.timerListMap within closure of _process["get config"] within closure of window["get process"]
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 6 [Score: 72]
+
+### GC Paths
+
+* internalUtilInspect within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 7 [Score: 64]
+
+### GC Paths
+
+* spliceOne within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* internalUtil.spliceOne within closure of StringDecoder within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+
+### Stack Traces Responsible
+
+
+
+
+
+# LeakRoots Ranked By Retained Size
+## LeakRoot Ranked 1 [Score: 1192]
+
+### GC Paths
+
+* execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+* async_wrap.execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 2 [Score: 616]
+
+### GC Paths
+
+* within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of testEnabled within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of emitWarningIfNeeded within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of debuglogImpl within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of util.debug within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 3 [Score: 360]
+
+### GC Paths
+
+* ERR_STREAM_DESTROYED within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* codes.ERR_STREAM_DESTROYED within closure of isStackOverflowError within closure of window.console.Console
+* ERR_STREAM_DESTROYED within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED.prototype.constructor within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 4 [Score: 72]
+
+### GC Paths
+
+* internalUtilInspect within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 5 [Score: 64]
+
+### GC Paths
+
+* spliceOne within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* internalUtil.spliceOne within closure of StringDecoder within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 6 [Score: 0]
+
+### GC Paths
+
+* _process within closure of window["get process"]
+* process within closure of window.btoa
+* process within closure of window.queueMicrotask
+* object within closure of window.console["get _stdout"]
+* process within closure of window.console.Console
+* process within closure of require within closure of window.clearImmediate
+* process within closure of Timeout within closure of window.clearImmediate
+* process within closure of destroyHooksExist within closure of window.clearImmediate
+* process within closure of isInsideNodeModules within closure of window.btoa
+* process within closure of isUint8Array within closure of window.btoa
+* process within closure of setHasRejectionToWarn within closure of window.queueMicrotask
+* process within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of _process._startProfilerIdleNotifier within closure of window["get process"]
+* process within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.emitWarning within closure of window["get process"]
+* process within closure of _process._fatalException within closure of window["get process"]
+* process within closure of _process["get config"] within closure of window["get process"]
+* process within closure of _process.hrtime within closure of window["get process"]
+* process within closure of path.resolve within closure of window.URLSearchParams
+* process within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of window.performance.__proto__.__proto__.now
+* process within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of debug within closure of Timeout within closure of window.clearImmediate
+* process within closure of _process._events.removeListener within closure of window["get process"]
+* process within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of clearEntriesFromBuffer within closure of window.performance.__proto__.constructor
+* process within closure of stdout.destroySoon within closure of window.console["get _stdout"]
+* process within closure of timerListMap[808]._idleNext._onTimeout within closure of window.clearImmediate
+* process within closure of getOptionValue within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of normalizeReferrerURL within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of handleProcessExit within closure of _process.hrtime within closure of window["get process"]
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.Transform within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.finished within closure of window.MessageEvent
+* process within closure of from within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.Stats within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.opendirSync within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of report["get reportOnSignal"] within closure of _process["get report"] within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor.runMain within closure of window["get process"]
+* process within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of util._extend within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of ReadFileContext within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of vm.createContext within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of asyncESM.initializeImportMetaObject within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of freeParser within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.lookup within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.Resolver within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of watchers.FSWatcher within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of defaultGetFormatWithoutErrors within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dgram.createSocket within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 7 [Score: 0]
+
+### GC Paths
+
+* timerListMap within closure of window.clearImmediate
+* timerListMap within closure of Timeout within closure of window.clearImmediate
+* internalTimers.timerListMap within closure of _process["get config"] within closure of window["get process"]
+
+### Stack Traces Responsible
+
+
+
+
+
+# LeakRoots Ranked By Transitive Closure Size
+## LeakRoot Ranked 1 [Score: 669824]
+
+### GC Paths
+
+* execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+* async_wrap.execution_async_resources within closure of destroyHooksExist within closure of window.clearImmediate
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 2 [Score: 669824]
+
+### GC Paths
+
+* within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of testEnabled within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of emitWarningIfNeeded within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of debuglogImpl within closure of debug within closure of Timeout within closure of window.clearImmediate
+* within closure of util.debug within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 3 [Score: 669824]
+
+### GC Paths
+
+* internalUtilInspect within closure of isStackOverflowError within closure of window.console.Console
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 4 [Score: 669824]
+
+### GC Paths
+
+* spliceOne within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* internalUtil.spliceOne within closure of StringDecoder within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 5 [Score: 669824]
+
+### GC Paths
+
+* _process within closure of window["get process"]
+* process within closure of window.btoa
+* process within closure of window.queueMicrotask
+* object within closure of window.console["get _stdout"]
+* process within closure of window.console.Console
+* process within closure of require within closure of window.clearImmediate
+* process within closure of Timeout within closure of window.clearImmediate
+* process within closure of destroyHooksExist within closure of window.clearImmediate
+* process within closure of isInsideNodeModules within closure of window.btoa
+* process within closure of isUint8Array within closure of window.btoa
+* process within closure of setHasRejectionToWarn within closure of window.queueMicrotask
+* process within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of _process._startProfilerIdleNotifier within closure of window["get process"]
+* process within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.emitWarning within closure of window["get process"]
+* process within closure of _process._fatalException within closure of window["get process"]
+* process within closure of _process["get config"] within closure of window["get process"]
+* process within closure of _process.hrtime within closure of window["get process"]
+* process within closure of path.resolve within closure of window.URLSearchParams
+* process within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of window.performance.__proto__.__proto__.now
+* process within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of debug within closure of Timeout within closure of window.clearImmediate
+* process within closure of _process._events.removeListener within closure of window["get process"]
+* process within closure of EventEmitter within closure of initNodeEventTarget within closure of window.MessageEvent
+* process within closure of clearEntriesFromBuffer within closure of window.performance.__proto__.constructor
+* process within closure of stdout.destroySoon within closure of window.console["get _stdout"]
+* process within closure of timerListMap[808]._idleNext._onTimeout within closure of window.clearImmediate
+* process within closure of getOptionValue within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of normalizeReferrerURL within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of handleProcessExit within closure of _process.hrtime within closure of window["get process"]
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.Transform within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* process within closure of ReadableWorkerStdio.__proto__.__proto__.finished within closure of window.MessageEvent
+* process within closure of from within closure of ReadableWorkerStdio.__proto__ within closure of window.MessageEvent
+* process within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.Stats within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of fs.opendirSync within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of report["get reportOnSignal"] within closure of _process["get report"] within closure of window["get process"]
+* process within closure of _process.mainModule.__proto__.constructor.runMain within closure of window["get process"]
+* process within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of util._extend within closure of isStackOverflowError within closure of window.console.Console
+* process within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of ReadFileContext within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of vm.createContext within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of asyncESM.initializeImportMetaObject within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of freeParser within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+* process within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.lookup within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dns.Resolver within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of watchers.FSWatcher within closure of fs.fstat within closure of _process.setSourceMapsEnabled within closure of window["get process"]
+* process within closure of defaultGetFormatWithoutErrors within closure of packageExportsResolve within closure of _process.mainModule.__proto__.constructor within closure of window["get process"]
+* process within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+* process within closure of dgram.createSocket within closure of getValidStdio within closure of fork within closure of cluster.setupPrimary within closure of stdout._events.end within closure of window.console["get _stdout"]
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 6 [Score: 669824]
+
+### GC Paths
+
+* timerListMap within closure of window.clearImmediate
+* timerListMap within closure of Timeout within closure of window.clearImmediate
+* internalTimers.timerListMap within closure of _process["get config"] within closure of window["get process"]
+
+### Stack Traces Responsible
+
+
+
+## LeakRoot Ranked 7 [Score: 6288]
+
+### GC Paths
+
+* ERR_STREAM_DESTROYED within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* codes.ERR_STREAM_DESTROYED within closure of isStackOverflowError within closure of window.console.Console
+* ERR_STREAM_DESTROYED within closure of ReadableWorkerStdio.__proto__.__proto__.pipeline within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED.prototype.constructor within closure of WritableWorkerStdio.__proto__ within closure of window.MessageEvent
+* ERR_STREAM_DESTROYED within closure of OutgoingMessage within closure of queue.tail.list[13].callback within closure of window.queueMicrotask
+
+### Stack Traces Responsible
+
+
+
+
