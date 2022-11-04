@@ -1,8 +1,8 @@
 import { exposeClosureState } from "../src/lib/closure_state_transform";
-import {SourceMapGenerator, SourceMapConsumer, RawSourceMap} from 'source-map';
+// import {SourceMapGenerator, SourceMapConsumer, RawSourceMap} from 'source-map';
 
-const sourceMap = new SourceMapGenerator({});
-let source = 
+// const sourceMap = new SourceMapGenerator({});
+let source =
 `
 var obj = {};
 var power = 2;
@@ -14,19 +14,20 @@ function leaking() {
     }
 }`
 
-let colsure_exp = 
+let colsure_exp =
 `
 const test = 1;
 function makeFunc() {
-    const name = 'Mozilla';
-    function displayName() {
-      console.log(name);
-    }
-    return displayName;
+  const name = 'Mozilla';
+  function displayName() {
+    console.log(name);
   }
-  
-  const myFunc = makeFunc();
-  myFunc();`;
+  return displayName;
+}
+
+const myFunc = makeFunc();
+myFunc();
+`;
 
 console.log(exposeClosureState("result.js", colsure_exp));
 

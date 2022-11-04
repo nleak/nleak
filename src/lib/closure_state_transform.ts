@@ -624,9 +624,9 @@ class GlobalScope implements IScope {
     console.log("-----GlobalScope.prelude-----");
     console.log(this._defineFunctionDeclsOnScope);
     console.log(this._vars);
-    
+
     console.log("-----GlobalScope.prelude-----");
-    
+
     if (this._defineFunctionDeclsOnScope) {
       // scopeidentifier.foo
       this._vars.forEach((v, name) => {
@@ -918,11 +918,14 @@ abstract class Visitor {
     let multipleStatementsEncountered = false;
     for (let i = 0; i < len; i++) {
       const s = st[i];
-      // console.log("----this----");
-      // console.log(this);
-      // console.log("----this----");
+      console.log("----this----");
+      console.log("====== s.type", s.type);
+      console.log(this);
+      console.log("----this----");
       //TODO what is this casting?
-      const newS = s; //(<any> this[s.type])(s);
+      // const newS = s;// (<any> this[s.type])(s);
+      // ts-ignore
+      const newS = (<any> this[s.type])(s);
       if (newS === undefined) {
         console.log("Got undefined processing the following:")
         console.log(s);
@@ -972,57 +975,56 @@ abstract class Visitor {
 
   public ExpressionStatement(es: ExpressionStatement): ExpressionStatement {
     const exp = es.expression;
-    // es.expression = (<any> this[exp.type])(exp);
+    es.expression = (<any> this[exp.type])(exp);
     return es;
   }
 
   public IfStatement(is: IfStatement): IfStatement {
     const test = is.test;
-    // is.test = (<any> this[test.type])(test);
+    is.test = (<any> this[test.type])(test);
     const cons = is.consequent;
-    // is.consequent = (<any> this[cons.type])(cons);
+    is.consequent = (<any> this[cons.type])(cons);
     const alt = is.alternate;
     if (alt) {
-      // is.alternate = (<any> this[alt.type])(alt);
+      is.alternate = (<any> this[alt.type])(alt);
     }
     return is;
   }
 
   public LabeledStatement(ls: LabeledStatement): LabeledStatement | MultipleStatements {
-    return ls;
-    // const body = ls.body;
-    // const newBody = (<any> this[body.type])(body);
-    // if (newBody.type === "MultipleStatements") {
-    //   const ms: MultipleStatements = newBody;
-    //   // Apply label to first applicable statement.
-    //   const stmts = ms.body;
-    //   let found = false;
-    //   forLoop:
-    //   for (let i = 0; i < stmts.length; i++) {
-    //     const stmt = stmts[i];
-    //     switch (stmt.type) {
-    //       case "DoWhileStatement":
-    //       case "WhileStatement":
-    //       case "ForStatement":
-    //       case "ForOfStatement":
-    //       case "ForInStatement":
-    //       case "SwitchStatement":
-    //         ls.body = stmt;
-    //         stmts[i] = ls;
-    //         found = true;
-    //         break forLoop;
-    //     }
-    //   }
-    //   if (!found) {
-    //     console.warn(`Unable to find loop to re-attach label to. Attaching to last statement.`);
-    //     ls.body = stmts[stmts.length - 1];
-    //     stmts[stmts.length - 1] = ls;
-    //   }
-    //   return ms;
-    // } else {
-    //   ls.body = newBody;
-    //   return ls;
-    // }
+    const body = ls.body;
+    const newBody = (<any> this[body.type])(body);
+    if (newBody.type === "MultipleStatements") {
+      const ms: MultipleStatements = newBody;
+      // Apply label to first applicable statement.
+      const stmts = ms.body;
+      let found = false;
+      forLoop:
+      for (let i = 0; i < stmts.length; i++) {
+        const stmt = stmts[i];
+        switch (stmt.type) {
+          case "DoWhileStatement":
+          case "WhileStatement":
+          case "ForStatement":
+          case "ForOfStatement":
+          case "ForInStatement":
+          case "SwitchStatement":
+            ls.body = stmt;
+            stmts[i] = ls;
+            found = true;
+            break forLoop;
+        }
+      }
+      if (!found) {
+        console.warn(`Unable to find loop to re-attach label to. Attaching to last statement.`);
+        ls.body = stmts[stmts.length - 1];
+        stmts[stmts.length - 1] = ls;
+      }
+      return ms;
+    } else {
+      ls.body = newBody;
+      return ls;
+    }
   }
 
   public BreakStatement(bs: BreakStatement): BreakStatement {
@@ -1034,14 +1036,14 @@ abstract class Visitor {
   }
 
   public WithStatement(ws: WithStatement): WithStatement | BlockStatement {
-    // ws.object = (<any> this[ws.object.type])(ws.object);
-    // ws.body = (<any> this[ws.body.type])(ws.body);
+    ws.object = (<any> this[ws.object.type])(ws.object);
+    ws.body = (<any> this[ws.body.type])(ws.body);
     return ws;
   }
 
   public SwitchStatement(ss: SwitchStatement): SwitchStatement {
     const disc = ss.discriminant;
-    // ss.discriminant = (<any> this[disc.type])(disc);
+    ss.discriminant = (<any> this[disc.type])(disc);
     const cases = ss.cases;
     const len = cases.length;
     for (let i = 0; i < len; i++) {
@@ -1054,14 +1056,14 @@ abstract class Visitor {
   public ReturnStatement(rs: ReturnStatement): ReturnStatement {
     const arg = rs.argument;
     if (arg) {
-      // rs.argument = (<any> this[arg.type])(arg);
+      rs.argument = (<any> this[arg.type])(arg);
     }
     return rs;
   }
 
   public ThrowStatement(ts: ThrowStatement): ThrowStatement {
     const arg = ts.argument;
-    // ts.argument = (<any> this[arg.type])(arg);
+    ts.argument = (<any> this[arg.type])(arg);
     return ts;
   }
 
@@ -1080,9 +1082,9 @@ abstract class Visitor {
   protected _WhileOrDoWhileStatement(n: WhileStatement): WhileStatement;
   protected _WhileOrDoWhileStatement(n: WhileStatement | DoWhileStatement): WhileStatement | DoWhileStatement {
     const test = n.test;
-    // n.test = (<any> this[test.type])(test);
+    n.test = (<any> this[test.type])(test);
     const body = n.body;
-    // n.body = (<any> this[body.type])(body);
+    n.body = (<any> this[body.type])(body);
     return n;
   }
 
@@ -1097,17 +1099,17 @@ abstract class Visitor {
   public ForStatement(n: ForStatement): ForStatement | MultipleStatements {
     const test = n.test;
     if (test) {
-      // n.test = (<any> this[test.type])(test);
+      n.test = (<any> this[test.type])(test);
     }
     const body = n.body;
-    // n.body = (<any> this[body.type])(body);
+    n.body = (<any> this[body.type])(body);
     const init = n.init;
     if (init) {
-      // n.init = (<any> this[init.type])(init);
+      n.init = (<any> this[init.type])(init);
     }
     const update = n.update;
     if (update) {
-      // n.update = (<any> this[update.type])(update);
+      n.update = (<any> this[update.type])(update);
     }
     return n;
   }
@@ -1118,9 +1120,9 @@ abstract class Visitor {
     const left = n.left;
     n.left = (<any> this[left.type])(left);
     const right = n.right;
-    // n.right = (<any> this[right.type])(right);
+    n.right = (<any> this[right.type])(right);
     const body = n.body;
-    // n.body = (<any> this[body.type])(body);
+    n.body = (<any> this[body.type])(body);
     return n;
   }
 
@@ -1172,7 +1174,7 @@ abstract class Visitor {
   public VariableDeclarator(n: VariableDeclarator): VariableDeclarator | MemberExpression | ExpressionStatement {
     const init = n.init;
     if (init) {
-      // n.init = (<any> this[init.type])(init);
+      n.init = (<any> this[init.type])(init);
     }
     return n;
   }
@@ -1189,7 +1191,7 @@ abstract class Visitor {
       // Possible for this to be null, as in:
       // var a = [,1,2];
       if (e !== null) {
-        // elements[i] = (<any> this[e.type])(e);
+        elements[i] = (<any> this[e.type])(e);
       }
     }
     return n;
@@ -1200,7 +1202,7 @@ abstract class Visitor {
     const len = props.length;
     for (let i = 0; i < len; i++) {
       const prop = props[i];
-      // props[i] = this.Property(prop);
+      props[i] = this.Property(prop as Property);
     }
     return n;
   }
@@ -1209,7 +1211,7 @@ abstract class Visitor {
     switch (n.kind) {
       case "init": {
         const val = n.value;
-        // n.value = (<any> this[val.type])(val);
+        n.value = (<any> this[val.type])(val);
         return n;
       }
       case "set":
@@ -1233,15 +1235,15 @@ abstract class Visitor {
 
   public UnaryExpression(n: UnaryExpression): UnaryExpression {
     const arg = n.argument;
-    // n.argument = (<any> this[arg.type])(arg);
+    n.argument = (<any> this[arg.type])(arg);
     return n;
   }
 
   public BinaryExpression(n: BinaryExpression): BinaryExpression | UnaryExpression | CallExpression {
     const left = n.left;
-    // n.left = (<any> this[left.type])(left);
+    n.left = (<any> this[left.type])(left);
     const right = n.right;
-    // n.right = (<any> this[right.type])(right);
+    n.right = (<any> this[right.type])(right);
     return n;
   }
 
@@ -1249,54 +1251,54 @@ abstract class Visitor {
     const left = n.left;
     n.left = (<any> this[left.type])(left);
     const right = n.right;
-    // n.right = (<any> this[right.type])(right);
+    n.right = (<any> this[right.type])(right);
     return n;
   }
 
   public UpdateExpression(n: UpdateExpression): UpdateExpression {
     const arg = n.argument;
-    // n.argument = (<any> this[arg.type])(arg);
+    n.argument = (<any> this[arg.type])(arg);
     return n;
   }
 
   public LogicalExpression(n: LogicalExpression): LogicalExpression {
     const left = n.left;
-    // n.left = (<any> this[left.type])(left);
+    n.left = (<any> this[left.type])(left);
     const right = n.right;
-    // n.right = (<any> this[right.type])(right);
+    n.right = (<any> this[right.type])(right);
     return n;
   }
 
   public ConditionalExpression(n: ConditionalExpression): ConditionalExpression {
     const alt = n.alternate;
-    // n.alternate = (<any> this[alt.type])(alt);
+    n.alternate = (<any> this[alt.type])(alt);
     const cons = n.consequent;
-    // n.consequent = (<any> this[cons.type])(cons);
+    n.consequent = (<any> this[cons.type])(cons);
     const test = n.test;
-    // n.test = (<any> this[test.type])(test);
+    n.test = (<any> this[test.type])(test);
     return n;
   }
 
   public CallExpression(n: CallExpression): CallExpression {
     const callee = n.callee;
-    // n.callee = (<any> this[callee.type])(callee);
+    n.callee = (<any> this[callee.type])(callee);
     const args = n.arguments;
     const len = args.length;
     for (let i = 0; i < len; i++) {
       const arg = args[i];
-      // args[i] = (<any> this[arg.type])(arg);
+      args[i] = (<any> this[arg.type])(arg);
     }
     return n;
   }
 
   public NewExpression(n: NewExpression): NewExpression {
     const callee = n.callee;
-    // n.callee = (<any> this[callee.type])(callee);
+    n.callee = (<any> this[callee.type])(callee);
     const args = n.arguments;
     const len = args.length;
     for (let i = 0; i < len; i++) {
       const arg = args[i];
-      // args[i] = (<any> this[arg.type])(arg);
+      args[i] = (<any> this[arg.type])(arg);
     }
     return n;
   }
@@ -1305,17 +1307,17 @@ abstract class Visitor {
     // Rewrite object, the target of the member expression.
     // Leave the property name alone.
     if (n.computed) {
-      // n.property = (<any> this[n.property.type])(n.property);
+      n.property = (<any> this[n.property.type])(n.property);
     }
     const obj = n.object;
-    // n.object = (<any> this[obj.type])(obj);
+    n.object = (<any> this[obj.type])(obj);
     return n;
   }
 
   public SwitchCase(n: SwitchCase): SwitchCase {
     const test = n.test;
     if (test) {
-      // n.test = (<any> this[test.type])(test);
+      n.test = (<any> this[test.type])(test);
     }
     n.consequent = <any[]> this.NodeArray(n.consequent);
     return n;
@@ -1433,6 +1435,26 @@ abstract class Visitor {
   public AwaitExpression(n: AwaitExpression): AwaitExpression {
     throw new Error(`AwaitExpression is not yet supported.`);
   }
+
+  public ChainExpression(n: AwaitExpression): AwaitExpression {
+    throw new Error(`ChainExpression is not yet supported.`);
+  }
+
+  public ImportExpression(n: AwaitExpression): AwaitExpression {
+    throw new Error(`ImportExpression is not yet supported.`);
+  }
+
+  public StaticBlock(n: AwaitExpression): AwaitExpression {
+    throw new Error(`StaticBlock is not yet supported.`);
+  }
+
+  public PrivateIdentifier(n: AwaitExpression): AwaitExpression {
+    throw new Error(`PrivateIdentifier is not yet supported.`);
+  }
+
+  public PropertyDefinition(n: AwaitExpression): AwaitExpression {
+    throw new Error(`PropertyDefinition is not yet supported.`);
+  }
 }
 
 /**
@@ -1492,7 +1514,7 @@ class ScopeScanningVisitor extends Visitor {
     console.log(rv == p);
     console.log(this._scopeMap);
     console.log("------ScopeScanningVisitor-----");
-    
+
     return rv;
   }
 
@@ -1795,14 +1817,14 @@ class EscapeAnalysisVisitor extends Visitor {
     console.log("-----EscapeAnalysisVisitor------");
     console.log(this._scope);
     console.log(prev);
-    
+
     console.log(this._scope == prev);
     console.log(rv == p);
     console.log(rv);
-    
-    
+
+
     console.log("-----EscapeAnalysisVisitor------");
-    
+
     this._scope = prev;
     return rv;
   }
@@ -1862,9 +1884,9 @@ class ScopeCreationVisitor extends Visitor {
     console.log(this._scope);
     console.log(this._scope instanceof GlobalScope);
     console.log(this._scope instanceof BlockScope);
-    
+
     console.log('----_insertScopeCreationAndFunctionScopeAssignments---');
-    
+
     if (this._scope instanceof GlobalScope) {
       mods = mods.concat(this._scope.prelude());
     }
@@ -1889,15 +1911,15 @@ class ScopeCreationVisitor extends Visitor {
     this._scope.finalize(this._getNextScope);
     const rv = super.Program(p);
     p.body = <any> this._insertScopeCreationAndFunctionScopeAssignments(p.body, true);
-    
+
     console.log("------ScopeCreationVisitor----");
     console.log(rv == p);
     console.log(rv);
     console.log(p);
-    
+
     console.log("------ScopeCreationVisitor----");
-    
-    
+
+
     this._scope = null;
     return rv;
   }
@@ -2240,13 +2262,13 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
   // console.log("-----map----");
   // console.log(map); //empty
   // console.log("-----map----");
-  
+
   const symbols = new Set<string>();
   let globalScope = undefined;
   // console.log("---evalScopeName---");
   // console.log(evalScopeName); // undefined
   // console.log("---evalScopeName---");
-  
+
   if (evalScopeName) {
     globalScope = new ProxyScope(evalScopeName, strictMode === false);
     // In strict mode, newly defined variables cannot escape.
@@ -2257,11 +2279,11 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
   ast =ScopeCreationVisitor.Visit(
        EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
   //EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map);
-  
+
   // ScopeCreationVisitor.Visit(
   //   EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
   console.log("----ast after visit-----");
-  
+
   console.log(ast);
   console.log(ast.body[0]);
 
@@ -2273,10 +2295,10 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
   console.log(symbols);
 
   console.log("---- generateJavaScript -----");
-  
+
   console.log(generateJavaScript(ast, { sourceMap }));
   console.log("---- generateJavaScript -----");
-  
+
   return generateJavaScript(ast, { sourceMap });
 }
 
@@ -2327,7 +2349,7 @@ function tryJSTransform(filename: string, source: string, transform: (filename: 
         file: filename
       });
       const converted = transform(filename, transformed.code, conversionSourceMap, false);
-      return embedSourceMap(converted, mergeMaps(filename, source, transformed.map, (conversionSourceMap as any).toJSON() as RawSourceMap));
+      return embedSourceMap(converted, mergeMaps(filename, source, (transformed.map as any), (conversionSourceMap as any).toJSON() as RawSourceMap));
     } catch (e) {
       try {
         // Might be even crazier ES2015! Use Babel (SLOWEST PATH)
