@@ -1510,8 +1510,7 @@ class ScopeScanningVisitor extends Visitor {
     const rv = super.Program(p);
     this._scopeMap.set(rv, this._scope);
     console.log("------ScopeScanningVisitor-----");
-    console.log(rv);
-    console.log(rv == p);
+    console.log(JSON.stringify(rv, null, 2));
     console.log(this._scopeMap);
     console.log("------ScopeScanningVisitor-----");
 
@@ -1814,16 +1813,14 @@ class EscapeAnalysisVisitor extends Visitor {
     const prev = this._scope;
     this._scope = this._scopeMap.get(p);
     const rv = super.Program(p);
-    console.log("-----EscapeAnalysisVisitor------");
+
+    console.log("-----EscapeAnalysisVisitor Start------");
     console.log(this._scope);
     console.log(prev);
-
     console.log(this._scope == prev);
-    console.log(rv == p);
+    console.log(JSON.stringify(rv) === JSON.stringify(p));
     console.log(rv);
-
-
-    console.log("-----EscapeAnalysisVisitor------");
+    console.log("-----EscapeAnalysisVisitor End------");
 
     this._scope = prev;
     return rv;
@@ -2276,8 +2273,12 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
       globalScope = new BlockScope(globalScope, true);
     }
   }
-  ast =ScopeCreationVisitor.Visit(
-       EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
+
+  ast = ScopeScanningVisitor.Visit(ast, map, symbols, globalScope);
+  console.log('============= after ScopeScanningVisitor.Visit =============', symbols, globalScope);
+  ast = EscapeAnalysisVisitor.Visit(ast, map);
+  ast = ScopeCreationVisitor.Visit(ast, map, symbols, agentUrl, polyfillUrl);
+
   //EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map);
 
   // ScopeCreationVisitor.Visit(
