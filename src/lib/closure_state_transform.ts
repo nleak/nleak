@@ -621,6 +621,12 @@ class GlobalScope implements IScope {
   }
   public prelude(): ExpressionStatement[] {
     const rv: ExpressionStatement[] = [];
+    console.log("-----GlobalScope.prelude-----");
+    console.log(this._defineFunctionDeclsOnScope);
+    console.log(this._vars);
+    
+    console.log("-----GlobalScope.prelude-----");
+    
     if (this._defineFunctionDeclsOnScope) {
       // scopeidentifier.foo
       this._vars.forEach((v, name) => {
@@ -912,6 +918,10 @@ abstract class Visitor {
     let multipleStatementsEncountered = false;
     for (let i = 0; i < len; i++) {
       const s = st[i];
+      // console.log("----this----");
+      // console.log(this);
+      // console.log("----this----");
+      //TODO what is this casting?
       const newS = s; //(<any> this[s.type])(s);
       if (newS === undefined) {
         console.log("Got undefined processing the following:")
@@ -1477,6 +1487,12 @@ class ScopeScanningVisitor extends Visitor {
   public Program(p: Program): Program {
     const rv = super.Program(p);
     this._scopeMap.set(rv, this._scope);
+    console.log("------ScopeScanningVisitor-----");
+    console.log(rv);
+    console.log(rv == p);
+    console.log(this._scopeMap);
+    console.log("------ScopeScanningVisitor-----");
+    
     return rv;
   }
 
@@ -1776,6 +1792,17 @@ class EscapeAnalysisVisitor extends Visitor {
     const prev = this._scope;
     this._scope = this._scopeMap.get(p);
     const rv = super.Program(p);
+    console.log("-----EscapeAnalysisVisitor------");
+    console.log(this._scope);
+    console.log(prev);
+    
+    console.log(this._scope == prev);
+    console.log(rv == p);
+    console.log(rv);
+    
+    
+    console.log("-----EscapeAnalysisVisitor------");
+    
     this._scope = prev;
     return rv;
   }
@@ -1831,6 +1858,13 @@ class ScopeCreationVisitor extends Visitor {
 
   protected _insertScopeCreationAndFunctionScopeAssignments(n: Node[], isProgram: boolean): Node[] {
     let mods: Node[] = this._scope instanceof BlockScope && this._scope.hasClosedOverVariables ? [this._scope.getScopeCreationStatement()] : [];
+    console.log('----_insertScopeCreationAndFunctionScopeAssignments---');
+    console.log(this._scope);
+    console.log(this._scope instanceof GlobalScope);
+    console.log(this._scope instanceof BlockScope);
+    
+    console.log('----_insertScopeCreationAndFunctionScopeAssignments---');
+    
     if (this._scope instanceof GlobalScope) {
       mods = mods.concat(this._scope.prelude());
     }
@@ -1855,6 +1889,15 @@ class ScopeCreationVisitor extends Visitor {
     this._scope.finalize(this._getNextScope);
     const rv = super.Program(p);
     p.body = <any> this._insertScopeCreationAndFunctionScopeAssignments(p.body, true);
+    
+    console.log("------ScopeCreationVisitor----");
+    console.log(rv == p);
+    console.log(rv);
+    console.log(p);
+    
+    console.log("------ScopeCreationVisitor----");
+    
+    
     this._scope = null;
     return rv;
   }
@@ -2178,8 +2221,9 @@ class ScopeCreationVisitor extends Visitor {
 function exposeClosureStateInternal(filename: string, source: string, sourceMap: SourceMapGenerator, agentUrl: string, polyfillUrl: string, evalScopeName?: string, strictMode?: boolean): string {
   let ast = parseJavaScript(source, { loc: true }); //ECMAScript parser
   console.log("----------");
-  console.log(source);
+  // console.log(source);
   console.log(ast);
+  // console.log(ast.body[0].constructor.name);
   console.log("----------");
 
   {
@@ -2193,11 +2237,15 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
   }
 
   const map = new Map<Program | BlockStatement, BlockScope>();
+  // console.log("-----map----");
+  // console.log(map); //empty
+  // console.log("-----map----");
+  
   const symbols = new Set<string>();
   let globalScope = undefined;
-  console.log("---evalScopeName---");
-  console.log(evalScopeName);
-  console.log("---evalScopeName---");
+  // console.log("---evalScopeName---");
+  // console.log(evalScopeName); // undefined
+  // console.log("---evalScopeName---");
   
   if (evalScopeName) {
     globalScope = new ProxyScope(evalScopeName, strictMode === false);
@@ -2206,8 +2254,12 @@ function exposeClosureStateInternal(filename: string, source: string, sourceMap:
       globalScope = new BlockScope(globalScope, true);
     }
   }
-  ast = ScopeCreationVisitor.Visit(
-    EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
+  ast =ScopeCreationVisitor.Visit(
+       EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
+  //EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map);
+  
+  // ScopeCreationVisitor.Visit(
+  //   EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
   console.log("----ast after visit-----");
   
   console.log(ast);

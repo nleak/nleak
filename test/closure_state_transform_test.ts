@@ -15,7 +15,9 @@ function leaking() {
 }`
 
 let colsure_exp = 
-`function makeFunc() {
+`
+const test = 1;
+function makeFunc() {
     const name = 'Mozilla';
     function displayName() {
       console.log(name);
