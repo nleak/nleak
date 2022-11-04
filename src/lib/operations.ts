@@ -471,9 +471,9 @@ class GetGrowthStacksOperation extends Operation {
     return opSt.progressBar.timeEvent(
       OperationType.GET_GROWTH_STACKS,
       async () => {
-        const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(
-          `window.$$$GET_STACK_TRACES$$$()`
-        );
+        // const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(
+        //   `window.$$$GET_STACK_TRACES$$$()`
+        // );
         // TODO: port growthStacks to NodeJS
         //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
