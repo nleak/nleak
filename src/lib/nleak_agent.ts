@@ -1,5 +1,12 @@
 "no transform";
 
+// Hack for types, TODO need remove eventually
+type EventListenerOrEventListenerObject = any;
+type Element = any;
+const document = global;
+const window = global;
+const self = global;
+
 interface Object {
   $$$PROXY$$$?: any;
 }
@@ -12,7 +19,16 @@ interface Function {
   __scope__: Scope;
 }
 
-//TODO name of the interface should be Global?
+interface MirrorNode {
+  root: Node;
+  childNodes: ChildNodes;
+}
+
+interface ChildNodes {
+  [p: string]: MirrorNode | number;
+  length: number;
+}
+
 interface Window {
   $$$INSTRUMENT_PATHS$$$(p: IPathTrees): void;
   $$$GET_STACK_TRACES$$$(): GrowingStackTraces;
@@ -32,10 +48,23 @@ interface Window {
   $$$FUNCTION_EXPRESSION$$$(fcn: Function, scope: Scope): Function;
   $$$OBJECT_EXPRESSION$$$(obj: object, scope: Scope): object;
   $$$CREATE_WITH_SCOPE$$$(withObj: Object, scope: Scope): Scope;
+  $$$SERIALIZE_DOM$$$(): void;
+  $$$DOM$$$: MirrorNode;
   $$$OBJECT$$$: typeof Object;
+}
+interface ListenerInfo {
+  useCapture: boolean | object;
+  listener: EventListenerOrEventListenerObject;
+}
+
+interface EventTarget {
+  $$listeners?: { [type: string]: ListenerInfo[] };
+  // Note: Needs to be a string so it shows up in the snapshot.
+  $$id?: string;
 }
 
 interface NodeList {
+  length: any;
   $$$TREE$$$: IPathTree;
   $$$ACCESS_STRING$$$: string;
   $$$STACKTRACES$$$: GrowthObjectStackTraces;
@@ -43,6 +72,7 @@ interface NodeList {
 }
 
 interface Node {
+  childNodes: any;
   $$$TREE$$$: IPathTree;
   $$$ACCESS_STRING$$$: string;
   $$$STACKTRACES$$$: GrowthObjectStackTraces;
@@ -57,11 +87,11 @@ declare function importScripts(s: string): void;
  * Agent injected into the webpage to surface browser-hidden leaks at the JS level.
  */
 (function() {
-  //TODO Global variables.
+  // Global variables.
   const IS_WINDOW = typeof window !== "undefined";
   const IS_WORKER = typeof importScripts !== "undefined";
-  const ROOT = <Window>(IS_WINDOW ? window : IS_WORKER ? self : global);
-  // const ROOT = <Global>NodeJS.Global;
+  // const ROOT = <Window>(IS_WINDOW ? window : IS_WORKER ? self : global);
+  const ROOT = global as any;
   // Avoid installing self twice.
   if (ROOT.$$$INSTRUMENT_PATHS$$$) {
     return;
@@ -79,12 +109,13 @@ declare function importScripts(s: string): void;
   ROOT.$$$FUNCTION_EXPRESSION$$$ = $$$FUNCTION_EXPRESSION$$$;
   ROOT.$$$OBJECT_EXPRESSION$$$ = $$$OBJECT_EXPRESSION$$$;
   ROOT.$$$CREATE_WITH_SCOPE$$$ = $$$CREATE_WITH_SCOPE$$$;
+  ROOT.$$$SERIALIZE_DOM$$$ = $$$SERIALIZE_DOM$$$;
   // Some programs define local variables named 'Object'.
   ROOT.$$$OBJECT$$$ = Object;
 
   const r = /'/g;
   // Some websites overwrite console.log, so grab a reference for debug logging.
-  //const console = ROOT.console ? ROOT.console : { log: (str: string) => {} };
+  const console = ROOT.console ? ROOT.console : { log: (str: string) => {} };
   const consoleLog = console.log;
   function logToConsole(s: string) {
     consoleLog.call(console, s);
@@ -96,7 +127,7 @@ declare function importScripts(s: string): void;
   function _getStackTrace(): string {
     try {
       throw new Error();
-    } catch (e) {
+    } catch (e: any) {
       return e.stack;
     }
   }
@@ -303,15 +334,16 @@ declare function importScripts(s: string): void;
       : NONSTRICT_EVAL_CACHE_LIMIT;
     let cache = evalCache.get(source);
     if (!cache) {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/eval", false);
-      xhr.setRequestHeader("Content-type", "application/json");
-      xhr.send(JSON.stringify({ scope: "scope", source, strictMode }));
-      cache = { e: xhr.responseText, ts: 0 };
-      evalCache.set(source, cache);
-      if (evalCache.size > evalCacheLimit) {
-        trimEvalCache(evalCache);
-      }
+      // TODO: remove this when we have a better way to handle evals.
+      // const xhr = new XMLHttpRequest();
+      // xhr.open("POST", "/eval", false);
+      // xhr.setRequestHeader("Content-type", "application/json");
+      // xhr.send(JSON.stringify({ scope: "scope", source, strictMode }));
+      // cache = { e: xhr.responseText, ts: 0 };
+      // evalCache.set(source, cache);
+      // if (evalCache.size > evalCacheLimit) {
+      //   trimEvalCache(evalCache);
+      // }
     }
     // Update timestamp
     cache.ts = Date.now();
@@ -383,6 +415,40 @@ declare function importScripts(s: string): void;
       }
     }
     return obj;
+  }
+
+  // Used to store child nodes as properties on an object rather than in an array to facilitate
+  // leak detection.
+  const NODE_PROP_PREFIX = "$$$CHILD$$$";
+  /**
+   * Converts the node's tree structure into a JavaScript-visible tree structure.
+   * TODO: Mutate to include any other Node properties that could be the source of leaks!
+   * @param n
+   */
+  function makeMirrorNode(n: Node): MirrorNode {
+    const childNodes = n.childNodes;
+    const m: MirrorNode = { root: n, childNodes: makeChildNode(childNodes) };
+    return m;
+  }
+
+  /**
+   * Converts the childNodes nodelist into a JS-level object.
+   * @param cn
+   */
+  function makeChildNode(cn: NodeList): ChildNodes {
+    const numChildren = cn.length;
+    let rv: ChildNodes = { length: numChildren };
+    for (let i = 0; i < numChildren; i++) {
+      // rv[`${NODE_PROP_PREFIX}${i}`] = makeMirrorNode(cn[i]);
+    }
+    return rv;
+  }
+
+  /**
+   * Serializes the DOM into a JavaScript-visible tree structure.
+   */
+  function $$$SERIALIZE_DOM$$$(): void {
+    // ROOT.$$$DOM$$$ = makeMirrorNode(document);
   }
 
   /**
@@ -721,6 +787,77 @@ declare function importScripts(s: string): void;
     }
   }
 
+  function instrumentDOMTree(
+    rootAccessString: string,
+    root: any,
+    tree: IPathTree,
+    stackTrace: string = null
+  ): void {
+    // For now: Simply crawl to the node(s) and instrument regularly from there. Don't try to plant getters/setters.
+    // $$DOM - - - - - -> root [regular subtree]
+    let obj: any;
+    let accessString = rootAccessString;
+    let switchToRegularTree = false;
+    switch (tree.indexOrName) {
+      case "$$$DOM$$$":
+        obj = document;
+        accessString = "document";
+        break;
+      case "root":
+        switchToRegularTree = true;
+        obj = root;
+        break;
+      case "childNodes":
+        obj = root["childNodes"];
+        accessString += `['childNodes']`;
+        break;
+      default:
+        const modIndex = (<string>tree.indexOrName).slice(
+          NODE_PROP_PREFIX.length
+        );
+        obj = root[modIndex];
+        accessString += `[${modIndex}]`;
+        break;
+    }
+
+    if (!obj) {
+      return;
+    }
+
+    if (obj && !obj.$$$TREE$$$) {
+      Object.defineProperties(obj, {
+        $$$TREE$$$: {
+          value: null,
+          writable: true,
+          configurable: true
+        },
+        $$$ACCESS_STRING$$$: {
+          value: null,
+          writable: true,
+          configurable: true
+        }
+      });
+    }
+    obj.$$$TREE$$$ = tree;
+    obj.$$$ACCESS_STRING$$$ = accessString;
+    if (tree.isGrowing) {
+      getProxy(accessString, obj, stackTrace);
+    }
+
+    // Capture writes of children.
+    const children = tree.children;
+    if (children) {
+      const instrumentFunction = switchToRegularTree
+        ? instrumentTree
+        : instrumentDOMTree;
+      const len = children.length;
+      for (let i = 0; i < len; i++) {
+        const child = children[i];
+        instrumentFunction(accessString, obj, child, stackTrace);
+      }
+    }
+  }
+
   function instrumentTree(
     rootAccessString: string,
     root: any,
@@ -752,10 +889,18 @@ declare function importScripts(s: string): void;
   // Disables proxy interception.
   let disableProxies = false;
 
+  function isDOMRoot(tree: IPathTree): boolean {
+    return tree.indexOrName === "$$$DOM$$$";
+  }
+
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
     for (const tree of trees) {
+      if (isDOMRoot(tree)) {
+        instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
+      } else {
         instrumentTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
+      }
     }
     instrumentedTrees = instrumentedTrees.concat(trees);
   }
@@ -787,10 +932,65 @@ declare function importScripts(s: string): void;
     }
   }
 
+  function getDOMStackTraces(
+    root: any,
+    path: IPathTree,
+    stacksMap: { [id: number]: Set<string> }
+  ): void {
+    let obj: any;
+    let switchToRegularTree = false;
+    switch (path.indexOrName) {
+      // case "$$$DOM$$$":
+      //   obj = document;
+      //   break;
+      case "root":
+        switchToRegularTree = true;
+        obj = root;
+        break;
+      case "childNodes":
+        obj = root[path.indexOrName];
+        break;
+      default:
+        obj = root[(<string>path.indexOrName).slice(NODE_PROP_PREFIX.length)];
+        break;
+    }
+
+    if (isProxyable(obj) && path.isGrowing) {
+      const wrappedObj = wrapIfOriginal(obj);
+      if (getProxyStatus(wrappedObj) === ProxyStatus.IS_PROXY) {
+        const map = getProxyStackTraces(wrappedObj);
+        const stackTraces = stacksMap[path.id]
+          ? stacksMap[path.id]
+          : new Set<string>();
+        map.forEach((v, k) => {
+          v.forEach(s => stackTraces.add(s));
+        });
+        stacksMap[path.id] = stackTraces;
+      }
+    }
+
+    // Capture writes of children.
+    const children = path.children;
+    const getStackTracesFunction = switchToRegularTree
+      ? getStackTraces
+      : getDOMStackTraces;
+    if (children) {
+      const len = children.length;
+      for (let i = 0; i < len; i++) {
+        const child = children[i];
+        getStackTracesFunction(obj, child, stacksMap);
+      }
+    }
+  }
+
   function $$$GET_STACK_TRACES$$$(): GrowingStackTraces {
     const stacksMap: { [id: number]: Set<string> } = {};
     for (const tree of instrumentedTrees) {
+      if (isDOMRoot(tree)) {
+        getDOMStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
+      } else {
         getStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
+      }
     }
     const jsonableStacksMap: GrowingStackTraces = {};
     for (const stringId in stacksMap) {
@@ -808,575 +1008,839 @@ declare function importScripts(s: string): void;
     return jsonableStacksMap;
   }
 
-  if (IS_WINDOW || IS_WORKER) {
-    // Disable these in NodeJS -- where we run unit tests.
+  // if (IS_WINDOW || IS_WORKER) {
+  //   // Disable these in NodeJS -- where we run unit tests.
 
-    // TODO: BLeak currently does not properly diagnose leaks in code / DOM nodes planted via document.write.
-    /*const documentWrite = Document.prototype.write;
-    Document.prototype.write = function(this: Document, str: string): void {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/evalHtml', false);
-      xhr.send(str);
-      return documentWrite.call(this, xhr.responseText);
-    };
-    Document.prototype.writeln = function(this: Document, str: string): void {
-      return this.write(str);
-    };*/
+  //   // TODO: BLeak currently does not properly diagnose leaks in code / DOM nodes planted via document.write.
+  //   /*const documentWrite = Document.prototype.write;
+  //   Document.prototype.write = function(this: Document, str: string): void {
+  //     const xhr = new XMLHttpRequest();
+  //     xhr.open('POST', '/evalHtml', false);
+  //     xhr.send(str);
+  //     return documentWrite.call(this, xhr.responseText);
+  //   };
+  //   Document.prototype.writeln = function(this: Document, str: string): void {
+  //     return this.write(str);
+  //   };*/
 
-    // Array modeling
-    Array.prototype.push = (function(push) {
-      return function(this: Array<any>, ...items: any[]): number {
-        try {
-          disableProxies = true;
-          if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
-            const map: GrowthObjectStackTraces = getProxyStackTraces(this);
-            const trace = _getStackTrace();
-            for (let i = 0; i < items.length; i++) {
-              _addStackTrace(map, `${this.length + i}`, trace);
-            }
-          }
-          return push.apply(this, items);
-        } finally {
-          disableProxies = false;
-        }
-      };
-    })(Array.prototype.push);
+  //   const addEventListener = EventTarget.prototype.addEventListener;
+  //   const removeEventListener = EventTarget.prototype.removeEventListener;
+  //   EventTarget.prototype.addEventListener = function(
+  //     this: EventTarget,
+  //     type: string,
+  //     listener: EventListenerOrEventListenerObject,
+  //     useCapture: boolean = false
+  //   ) {
+  //     addEventListener.apply(unwrapIfProxy(this), arguments);
+  //     if (!this.$$listeners) {
+  //       this.$$listeners = {};
+  //     }
+  //     let listeners = this.$$listeners[type];
+  //     if (!listeners) {
+  //       listeners = this.$$listeners[type] = [];
+  //     }
+  //     for (const listenerInfo of listeners) {
+  //       if (
+  //         listenerInfo.listener === listener &&
+  //         (typeof listenerInfo.useCapture === "boolean"
+  //           ? listenerInfo.useCapture === useCapture
+  //           : true)
+  //       ) {
+  //         return;
+  //       }
+  //     }
+  //     listeners.push({
+  //       listener: listener,
+  //       useCapture: useCapture
+  //     });
+  //   };
 
-    Array.prototype.unshift = (function(unshift) {
-      return function(this: Array<any>, ...items: any[]): number {
-        try {
-          disableProxies = true;
-          if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
-            const map: GrowthObjectStackTraces = getProxyStackTraces(this);
-            const newItemLen = items.length;
-            const trace = _getStackTrace();
-            for (let i = items.length - 1; i >= 0; i--) {
-              _copyStacks(map, `${i}`, `${i + newItemLen}`);
-            }
-            for (let i = 0; i < items.length; i++) {
-              _removeStacks(map, `${i}`);
-              _addStackTrace(map, `${i}`, trace);
-            }
-          }
-          return unshift.apply(this, items);
-        } finally {
-          disableProxies = false;
-        }
-      };
-    })(Array.prototype.unshift);
+  //   EventTarget.prototype.removeEventListener = function(
+  //     this: EventTarget,
+  //     type: string,
+  //     listener: EventListenerOrEventListenerObject,
+  //     useCapture: boolean | object = false
+  //   ) {
+  //     removeEventListener.apply(unwrapIfProxy(this), arguments);
+  //     if (this.$$listeners) {
+  //       const listeners = this.$$listeners[type];
+  //       if (listeners) {
+  //         for (let i = 0; i < listeners.length; i++) {
+  //           const lInfo = listeners[i];
+  //           if (
+  //             lInfo.listener === listener &&
+  //             (typeof lInfo.useCapture === "boolean"
+  //               ? lInfo.useCapture === useCapture
+  //               : true)
+  //           ) {
+  //             listeners.splice(i, 1);
+  //             if (listeners.length === 0) {
+  //               delete this.$$listeners[type];
+  //             }
+  //             return;
+  //           }
+  //         }
+  //       }
+  //     }
+  //   };
 
-    Array.prototype.pop = (function(pop) {
-      return function(this: Array<any>): any {
-        try {
-          disableProxies = true;
-          if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
-            const map: GrowthObjectStackTraces = getProxyStackTraces(this);
-            _removeStacks(map, `${this.length - 1}`);
-          }
-          return pop.apply(this);
-        } finally {
-          disableProxies = false;
-        }
-      };
-    })(Array.prototype.pop);
+  //   // Array modeling
+  //   Array.prototype.push = (function(push) {
+  //     return function(this: Array<any>, ...items: any[]): number {
+  //       try {
+  //         disableProxies = true;
+  //         if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
+  //           const map: GrowthObjectStackTraces = getProxyStackTraces(this);
+  //           const trace = _getStackTrace();
+  //           for (let i = 0; i < items.length; i++) {
+  //             _addStackTrace(map, `${this.length + i}`, trace);
+  //           }
+  //         }
+  //         return push.apply(this, items);
+  //       } finally {
+  //         disableProxies = false;
+  //       }
+  //     };
+  //   })(Array.prototype.push);
 
-    Array.prototype.shift = (function(shift) {
-      return function(this: Array<any>): any {
-        try {
-          disableProxies = true;
-          if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
-            const map: GrowthObjectStackTraces = getProxyStackTraces(this);
-            _removeStacks(map, "0");
-            for (let i = 1; i < this.length; i++) {
-              _copyStacks(map, `${i}`, `${i - 1}`);
-            }
-            _removeStacks(map, `${this.length - 1}`);
-          }
-          return shift.apply(this);
-        } finally {
-          disableProxies = false;
-        }
-      };
-    })(Array.prototype.shift);
+  //   Array.prototype.unshift = (function(unshift) {
+  //     return function(this: Array<any>, ...items: any[]): number {
+  //       try {
+  //         disableProxies = true;
+  //         if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
+  //           const map: GrowthObjectStackTraces = getProxyStackTraces(this);
+  //           const newItemLen = items.length;
+  //           const trace = _getStackTrace();
+  //           for (let i = items.length - 1; i >= 0; i--) {
+  //             _copyStacks(map, `${i}`, `${i + newItemLen}`);
+  //           }
+  //           for (let i = 0; i < items.length; i++) {
+  //             _removeStacks(map, `${i}`);
+  //             _addStackTrace(map, `${i}`, trace);
+  //           }
+  //         }
+  //         return unshift.apply(this, items);
+  //       } finally {
+  //         disableProxies = false;
+  //       }
+  //     };
+  //   })(Array.prototype.unshift);
 
-    Array.prototype.splice = (function(splice) {
-      return function(
-        this: Array<any>,
-        start: number,
-        deleteCount: number,
-        ...items: any[]
-      ): any {
-        try {
-          disableProxies = true;
-          if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
-            const map: GrowthObjectStackTraces = getProxyStackTraces(this);
-            let actualStart = start | 0;
-            if (actualStart === undefined) {
-              return [];
-            }
-            // If greater than the length of the array, actual starting index will be set to the length of the array.
-            if (actualStart > this.length) {
-              actualStart = this.length;
-            }
-            // If negative, will begin that many elements from the end of the array (with origin 1)
-            // and will be set to 0 if absolute value is greater than the length of the array.
-            if (actualStart < 0) {
-              actualStart = this.length + actualStart;
-              if (actualStart < 0) {
-                actualStart = 0;
-              }
-            }
-            let actualDeleteCount = deleteCount | 0;
-            // If deleteCount is omitted, or if its value is larger than array.length - start,
-            //   then all of the elements beginning with start index on through the end of the array will be deleted.
-            if (
-              deleteCount === undefined ||
-              actualDeleteCount > this.length - actualStart
-            ) {
-              actualDeleteCount = this.length - actualStart;
-            }
-            if (actualDeleteCount < 0) {
-              actualDeleteCount = 0;
-            }
+  //   Array.prototype.pop = (function(pop) {
+  //     return function(this: Array<any>): any {
+  //       try {
+  //         disableProxies = true;
+  //         if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
+  //           const map: GrowthObjectStackTraces = getProxyStackTraces(this);
+  //           _removeStacks(map, `${this.length - 1}`);
+  //         }
+  //         return pop.apply(this);
+  //       } finally {
+  //         disableProxies = false;
+  //       }
+  //     };
+  //   })(Array.prototype.pop);
 
-            for (let i = 0; i < actualDeleteCount; i++) {
-              const index = actualStart + i;
-              _removeStacks(map, `${index}`);
-            }
+  //   Array.prototype.shift = (function(shift) {
+  //     return function(this: Array<any>): any {
+  //       try {
+  //         disableProxies = true;
+  //         if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
+  //           const map: GrowthObjectStackTraces = getProxyStackTraces(this);
+  //           _removeStacks(map, "0");
+  //           for (let i = 1; i < this.length; i++) {
+  //             _copyStacks(map, `${i}`, `${i - 1}`);
+  //           }
+  //           _removeStacks(map, `${this.length - 1}`);
+  //         }
+  //         return shift.apply(this);
+  //       } finally {
+  //         disableProxies = false;
+  //       }
+  //     };
+  //   })(Array.prototype.shift);
 
-            // Move existing traces into new locations.
-            const newItemCount = items.length;
-            if (newItemCount > actualDeleteCount) {
-              // Shift *upward*
-              const delta = newItemCount - actualDeleteCount;
-              for (
-                let i = this.length - 1;
-                i >= actualStart + actualDeleteCount;
-                i--
-              ) {
-                _copyStacks(map, `${i}`, `${i + delta}`);
-              }
-            } else if (newItemCount < actualDeleteCount) {
-              // Shift *downward*
-              const delta = newItemCount - actualDeleteCount;
-              for (
-                let i = actualStart + actualDeleteCount;
-                i < this.length;
-                i++
-              ) {
-                _copyStacks(map, `${i}`, `${i + delta}`);
-              }
-              // Delete extra traces for removed indexes.
-              for (let i = this.length + delta; i < this.length; i++) {
-                _removeStacks(map, `${i}`);
-              }
-            }
+  //   Array.prototype.splice = (function(splice) {
+  //     return function(
+  //       this: Array<any>,
+  //       start: number,
+  //       deleteCount: number,
+  //       ...items: any[]
+  //     ): any {
+  //       try {
+  //         disableProxies = true;
+  //         if (getProxyStatus(this) === ProxyStatus.IS_PROXY) {
+  //           const map: GrowthObjectStackTraces = getProxyStackTraces(this);
+  //           let actualStart = start | 0;
+  //           if (actualStart === undefined) {
+  //             return [];
+  //           }
+  //           // If greater than the length of the array, actual starting index will be set to the length of the array.
+  //           if (actualStart > this.length) {
+  //             actualStart = this.length;
+  //           }
+  //           // If negative, will begin that many elements from the end of the array (with origin 1)
+  //           // and will be set to 0 if absolute value is greater than the length of the array.
+  //           if (actualStart < 0) {
+  //             actualStart = this.length + actualStart;
+  //             if (actualStart < 0) {
+  //               actualStart = 0;
+  //             }
+  //           }
+  //           let actualDeleteCount = deleteCount | 0;
+  //           // If deleteCount is omitted, or if its value is larger than array.length - start,
+  //           //   then all of the elements beginning with start index on through the end of the array will be deleted.
+  //           if (
+  //             deleteCount === undefined ||
+  //             actualDeleteCount > this.length - actualStart
+  //           ) {
+  //             actualDeleteCount = this.length - actualStart;
+  //           }
+  //           if (actualDeleteCount < 0) {
+  //             actualDeleteCount = 0;
+  //           }
 
-            const trace = _getStackTrace();
-            // Add new traces for new items.
-            for (let i = 0; i < newItemCount; i++) {
-              _removeStacks(map, `${actualStart + i}`);
-              _addStackTrace(map, `${actualStart + i}`, trace);
-            }
-          }
-          return splice.apply(this, arguments);
-        } finally {
-          disableProxies = false;
-        }
-      };
-    })(Array.prototype.splice);
+  //           for (let i = 0; i < actualDeleteCount; i++) {
+  //             const index = actualStart + i;
+  //             _removeStacks(map, `${index}`);
+  //           }
 
-    Array.prototype.indexOf = function(
-      this: Array<any>,
-      searchElement,
-      fromIndexArg?: number
-    ): any {
-      let fromIndex = fromIndexArg || 0;
-      // If the provided index value is a negative number, it is taken as the offset from the end of the array.
-      // The array is still searched from front to back.
-      if (fromIndex < 0) {
-        fromIndex = this.length + fromIndex;
-      }
-      // If the calculated index is less than 0, then the whole array will be searched.
-      if (fromIndex < 0) {
-        fromIndex = 0;
-      }
-      // If the index is greater than or equal to the array's length, -1 is returned, which means the array will not be searched.
-      if (fromIndex >= this.length) {
-        return -1;
-      }
+  //           // Move existing traces into new locations.
+  //           const newItemCount = items.length;
+  //           if (newItemCount > actualDeleteCount) {
+  //             // Shift *upward*
+  //             const delta = newItemCount - actualDeleteCount;
+  //             for (
+  //               let i = this.length - 1;
+  //               i >= actualStart + actualDeleteCount;
+  //               i--
+  //             ) {
+  //               _copyStacks(map, `${i}`, `${i + delta}`);
+  //             }
+  //           } else if (newItemCount < actualDeleteCount) {
+  //             // Shift *downward*
+  //             const delta = newItemCount - actualDeleteCount;
+  //             for (
+  //               let i = actualStart + actualDeleteCount;
+  //               i < this.length;
+  //               i++
+  //             ) {
+  //               _copyStacks(map, `${i}`, `${i + delta}`);
+  //             }
+  //             // Delete extra traces for removed indexes.
+  //             for (let i = this.length + delta; i < this.length; i++) {
+  //               _removeStacks(map, `${i}`);
+  //             }
+  //           }
 
-      for (; fromIndex < this.length; fromIndex++) {
-        if ($$$SEQ$$$(this[fromIndex], searchElement)) {
-          return fromIndex;
-        }
-      }
-      return -1;
-    };
+  //           const trace = _getStackTrace();
+  //           // Add new traces for new items.
+  //           for (let i = 0; i < newItemCount; i++) {
+  //             _removeStacks(map, `${actualStart + i}`);
+  //             _addStackTrace(map, `${actualStart + i}`, trace);
+  //           }
+  //         }
+  //         return splice.apply(this, arguments);
+  //       } finally {
+  //         disableProxies = false;
+  //       }
+  //     };
+  //   })(Array.prototype.splice);
 
-    Array.prototype.lastIndexOf = function(
-      this: any[],
-      searchElement: any,
-      fromIndex = 0
-    ): number {
-      if (this === void 0 || this === null) {
-        throw new TypeError();
-      }
+  //   Array.prototype.indexOf = function(
+  //     this: Array<any>,
+  //     searchElement,
+  //     fromIndexArg?: number
+  //   ): any {
+  //     let fromIndex = fromIndexArg || 0;
+  //     // If the provided index value is a negative number, it is taken as the offset from the end of the array.
+  //     // The array is still searched from front to back.
+  //     if (fromIndex < 0) {
+  //       fromIndex = this.length + fromIndex;
+  //     }
+  //     // If the calculated index is less than 0, then the whole array will be searched.
+  //     if (fromIndex < 0) {
+  //       fromIndex = 0;
+  //     }
+  //     // If the index is greater than or equal to the array's length, -1 is returned, which means the array will not be searched.
+  //     if (fromIndex >= this.length) {
+  //       return -1;
+  //     }
 
-      let t = Object(this),
-        len = t.length >>> 0;
-      if (len === 0) {
-        return -1;
-      }
+  //     for (; fromIndex < this.length; fromIndex++) {
+  //       if ($$$SEQ$$$(this[fromIndex], searchElement)) {
+  //         return fromIndex;
+  //       }
+  //     }
+  //     return -1;
+  //   };
 
-      let n = len - 1;
-      if (arguments.length > 1) {
-        n = Number(arguments[1]);
-        if (n != n) {
-          n = 0;
-        } else if (n != 0 && n != 1 / 0 && n != -(1 / 0)) {
-          n = (n > 0 ? 1 : -1) * Math.floor(Math.abs(n));
-        }
-      }
+  //   Array.prototype.lastIndexOf = function(
+  //     this: any[],
+  //     searchElement: any,
+  //     fromIndex = 0
+  //   ): number {
+  //     if (this === void 0 || this === null) {
+  //       throw new TypeError();
+  //     }
 
-      for (
-        let k = n >= 0 ? Math.min(n, len - 1) : len - Math.abs(n);
-        k >= 0;
-        k--
-      ) {
-        if (k in t && $$$SEQ$$$(t[k], searchElement)) {
-          return k;
-        }
-      }
-      return -1;
-    };
+  //     let t = Object(this),
+  //       len = t.length >>> 0;
+  //     if (len === 0) {
+  //       return -1;
+  //     }
 
-    // TODO: Sort, reverse, ...
+  //     let n = len - 1;
+  //     if (arguments.length > 1) {
+  //       n = Number(arguments[1]);
+  //       if (n != n) {
+  //         n = 0;
+  //       } else if (n != 0 && n != 1 / 0 && n != -(1 / 0)) {
+  //         n = (n > 0 ? 1 : -1) * Math.floor(Math.abs(n));
+  //       }
+  //     }
 
-    // Deterministic Math.random(), so jQuery variable name is deterministic across runs.
-    // From https://gist.github.com/mathiasbynens/5670917
-    Math.random = (function() {
-      let seed = 0x2f6e2b1;
-      return function() {
-        // Robert Jenkins’ 32 bit integer hash function
-        seed = (seed + 0x7ed55d16 + (seed << 12)) & 0xffffffff;
-        seed = (seed ^ 0xc761c23c ^ (seed >>> 19)) & 0xffffffff;
-        seed = (seed + 0x165667b1 + (seed << 5)) & 0xffffffff;
-        seed = ((seed + 0xd3a2646c) ^ (seed << 9)) & 0xffffffff;
-        seed = (seed + 0xfd7046c5 + (seed << 3)) & 0xffffffff;
-        seed = (seed ^ 0xb55a4f09 ^ (seed >>> 16)) & 0xffffffff;
-        return (seed & 0xfffffff) / 0x10000000;
-      };
-    })();
+  //     for (
+  //       let k = n >= 0 ? Math.min(n, len - 1) : len - Math.abs(n);
+  //       k >= 0;
+  //       k--
+  //     ) {
+  //       if (k in t && $$$SEQ$$$(t[k], searchElement)) {
+  //         return k;
+  //       }
+  //     }
+  //     return -1;
+  //   };
 
-    // Deterministic Date.now(), so YUI variable name is deterministic across runs.
-    let dateNowCount = 0;
-    Date.now = Date.prototype.getTime = function() {
-      return 1516992512425 + dateNowCount++;
-    };
+  //   // TODO: Sort, reverse, ...
 
-    /**
-     * Interposes on a particular API to return proxy objects for objects with proxies and unwrap arguments that are proxies.
-     */
-    function proxyInterposition(obj: any, property: string, key: string): void {
-      const original = Object.getOwnPropertyDescriptor(obj, property);
-      if (!original.configurable) {
-        return;
-      }
-      try {
-        Object.defineProperty(obj, property, {
-          get: function() {
-            const value = original.get
-              ? original.get.apply(unwrapIfProxy(this))
-              : original.value;
-            if (typeof value === "function") {
-              return function(this: any, ...args: any[]) {
-                return wrapIfOriginal(
-                  unwrapIfProxy(value).apply(
-                    unwrapIfProxy(this),
-                    args.map(unwrapIfProxy)
-                  )
-                );
-              };
-            } else {
-              return wrapIfOriginal(value);
-            }
-          },
-          set: function(v) {
-            const originalV = unwrapIfProxy(v);
-            if (original.set) {
-              original.set.call(unwrapIfProxy(this), originalV);
-            } else if (original.writable) {
-              original.value = originalV;
-            }
-            // Otherwise: NOP.
-          },
-          // Make interposition nestable
-          configurable: true
-        });
-      } catch (e) {
-        logToConsole(`Unable to instrument ${key}`);
-      }
-    }
+  //   // Deterministic Math.random(), so jQuery variable name is deterministic across runs.
+  //   // From https://gist.github.com/mathiasbynens/5670917
+  //   Math.random = (function() {
+  //     let seed = 0x2f6e2b1;
+  //     return function() {
+  //       // Robert Jenkins’ 32 bit integer hash function
+  //       seed = (seed + 0x7ed55d16 + (seed << 12)) & 0xffffffff;
+  //       seed = (seed ^ 0xc761c23c ^ (seed >>> 19)) & 0xffffffff;
+  //       seed = (seed + 0x165667b1 + (seed << 5)) & 0xffffffff;
+  //       seed = ((seed + 0xd3a2646c) ^ (seed << 9)) & 0xffffffff;
+  //       seed = (seed + 0xfd7046c5 + (seed << 3)) & 0xffffffff;
+  //       seed = (seed ^ 0xb55a4f09 ^ (seed >>> 16)) & 0xffffffff;
+  //       return (seed & 0xfffffff) / 0x10000000;
+  //     };
+  //   })();
 
-    /**
-     * Interposition "on[eventname]" properties and store value as an expando
-     * property on DOM element so it shows up in the heap snapshot.
-     * @param obj
-     * @param propName
-     */
-    function interpositionEventListenerProperty(
-      obj: object,
-      propName: string
-    ): void {
-      const desc = Object.getOwnPropertyDescriptor(obj, propName);
-      if (desc) {
-        delete desc["value"];
-        delete desc["writable"];
-        const set = desc.set;
-        desc.set = function(this: any, val: any) {
-          set.call(this, val);
-          this[`$$${propName}`] = val;
-        };
-        Object.defineProperty(obj, propName, desc);
-      }
-    }
+  //   // Deterministic Date.now(), so YUI variable name is deterministic across runs.
+  //   let dateNowCount = 0;
+  //   Date.now = Date.prototype.getTime = function() {
+  //     return 1516992512425 + dateNowCount++;
+  //   };
 
-    if (IS_WINDOW) {
-      Object.defineProperty(Node.prototype, "$$$REINSTRUMENT$$$", {
-        value: $$$REINSTRUMENT$$$,
-        configurable: true
-      });
-      Object.defineProperty(NodeList.prototype, "$$$REINSTRUMENT$$$", {
-        value: $$$REINSTRUMENT$$$,
-        configurable: true
-      });
+  //   /**
+  //    * Interposes on a particular API to return proxy objects for objects with proxies and unwrap arguments that are proxies.
+  //    */
+  //   function proxyInterposition(obj: any, property: string, key: string): void {
+  //     const original = Object.getOwnPropertyDescriptor(obj, property);
+  //     if (!original.configurable) {
+  //       return;
+  //     }
+  //     try {
+  //       Object.defineProperty(obj, property, {
+  //         get: function() {
+  //           const value = original.get
+  //             ? original.get.apply(unwrapIfProxy(this))
+  //             : original.value;
+  //           if (typeof value === "function") {
+  //             return function(this: any, ...args: any[]) {
+  //               return wrapIfOriginal(
+  //                 unwrapIfProxy(value).apply(
+  //                   unwrapIfProxy(this),
+  //                   args.map(unwrapIfProxy)
+  //                 )
+  //               );
+  //             };
+  //           } else {
+  //             return wrapIfOriginal(value);
+  //           }
+  //         },
+  //         set: function(v) {
+  //           const originalV = unwrapIfProxy(v);
+  //           if (original.set) {
+  //             original.set.call(unwrapIfProxy(this), originalV);
+  //           } else if (original.writable) {
+  //             original.value = originalV;
+  //           }
+  //           // Otherwise: NOP.
+  //         },
+  //         // Make interposition nestable
+  //         configurable: true
+  //       });
+  //     } catch (e) {
+  //       logToConsole(`Unable to instrument ${key}`);
+  //     }
+  //   }
 
-      const textContent = Object.getOwnPropertyDescriptor(
-        Node.prototype,
-        "textContent"
-      );
-      // textContent: Pass in a string. Replaces all children w/ a single text node.
-      Object.defineProperty(Node.prototype, "textContent", {
-        get: textContent.get,
-        set: function(this: Node, v: any) {
-          const rv = textContent.set.call(this, v);
-          const cn = this.childNodes;
-          if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-            const traces = getProxyStackTraces(cn);
-            traces.clear();
-            _initializeMap(cn, traces, _getStackTrace());
-          }
-          this.childNodes.$$$REINSTRUMENT$$$();
-          return rv;
-        },
-        enumerable: true,
-        configurable: true
-      });
+  //   /**
+  //    * Interposition "on[eventname]" properties and store value as an expando
+  //    * property on DOM element so it shows up in the heap snapshot.
+  //    * @param obj
+  //    * @param propName
+  //    */
+  //   function interpositionEventListenerProperty(
+  //     obj: object,
+  //     propName: string
+  //   ): void {
+  //     const desc = Object.getOwnPropertyDescriptor(obj, propName);
+  //     if (desc) {
+  //       delete desc["value"];
+  //       delete desc["writable"];
+  //       const set = desc.set;
+  //       desc.set = function(this: any, val: any) {
+  //         set.call(this, val);
+  //         this[`$$${propName}`] = val;
+  //       };
+  //       Object.defineProperty(obj, propName, desc);
+  //     }
+  //   }
 
-      const appendChild = Node.prototype.appendChild;
-      Node.prototype.appendChild = function<T extends Node>(
-        this: Node,
-        newChild: T
-      ): T {
-        /**
-         * The Node.appendChild() method adds a node to the end of the list of children of a specified parent node.
-         * If the given child is a reference to an existing node in the document,
-         * appendChild() moves it from its current position to the new position.
-         */
-        if (newChild.parentNode !== null) {
-          newChild.parentNode.removeChild(newChild);
-        }
+  //   if (IS_WINDOW) {
+  //     [
+  //       Document.prototype,
+  //       Element.prototype,
+  //       MediaQueryList.prototype,
+  //       FileReader.prototype,
+  //       HTMLBodyElement.prototype,
+  //       HTMLElement.prototype,
+  //       HTMLFrameSetElement.prototype,
+  //       ApplicationCache.prototype, //EventSource.prototype, SVGAnimationElement.prototype,
+  //       SVGElement.prototype,
+  //       XMLHttpRequest.prototype, //XMLHttpRequestEventTarget.prototype,
+  //       WebSocket.prototype,
+  //       IDBDatabase.prototype,
+  //       IDBOpenDBRequest.prototype,
+  //       IDBRequest.prototype,
+  //       IDBTransaction.prototype,
+  //       window
+  //     ].forEach(obj => {
+  //       Object.keys(obj)
+  //         .filter(p => p.startsWith("on"))
+  //         .forEach(p => {
+  //           interpositionEventListenerProperty(obj, p);
+  //         });
+  //     });
 
-        const cn = this.childNodes;
-        if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-          const traces = getProxyStackTraces(cn);
-          _addStackTrace(traces, `${cn.length}`);
-        }
+  //     [
+  //       [Node.prototype, "Node"],
+  //       [Element.prototype, "Element"],
+  //       [HTMLElement.prototype, "HTMLElement"],
+  //       [Document.prototype, "Document"],
+  //       [HTMLCanvasElement.prototype, "HTMLCanvasElement"],
+  //       [NodeList.prototype, "NodeList"]
+  //     ].forEach(v =>
+  //       Object.keys(v[0]).forEach(k =>
+  //         proxyInterposition(v[0], k, `${v[1]}.${k}`)
+  //       )
+  //     );
 
-        const rv = appendChild.call(this, newChild);
-        cn.$$$REINSTRUMENT$$$();
-        return rv;
-      };
+  //     const $$$REINSTRUMENT$$$ = function(this: Node | NodeList): void {
+  //       if (this.$$$TREE$$$) {
+  //         instrumentDOMTree(
+  //           this.$$$ACCESS_STRING$$$,
+  //           this,
+  //           this.$$$TREE$$$,
+  //           _getStackTrace()
+  //         );
+  //       }
+  //     };
+  //     Object.defineProperty(Node.prototype, "$$$REINSTRUMENT$$$", {
+  //       value: $$$REINSTRUMENT$$$,
+  //       configurable: true
+  //     });
+  //     Object.defineProperty(NodeList.prototype, "$$$REINSTRUMENT$$$", {
+  //       value: $$$REINSTRUMENT$$$,
+  //       configurable: true
+  //     });
 
-      const insertBefore = Node.prototype.insertBefore;
-      // insertBefore: Takes Nodes. Modifies DOM.
-      Node.prototype.insertBefore = function<T extends Node>(
-        newChild: T,
-        refChild: Node
-      ): T {
-        /**
-         * The Node.insertBefore() method inserts the specified node before the reference
-         * node as a child of the current node.
-         *
-         * If referenceNode is null, the newNode is inserted at the end of the list of child nodes.
-         *
-         * Note that referenceNode is not an optional parameter -- you must explicitly pass a Node
-         * or null. Failing to provide it or passing invalid values may behave differently in
-         * different browser versions.
-         */
-        const cn = this.childNodes;
-        if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-          if (refChild === null) {
-            // Avoid tracking stack traces for special case.
-            return this.appendChild(newChild);
-          } else {
-            const stacks = getProxyStackTraces(cn);
-            const len = cn.length;
-            let position = -1;
-            for (let i = 0; i < len; i++) {
-              if ($$$SEQ$$$(cn[i], refChild)) {
-                position = i;
-                break;
-              }
-            }
-            if (position === -1) {
-              logToConsole(`insertBefore called with invalid node!`);
-            } else {
-              for (let i = len - 1; i >= position; i--) {
-                _copyStacks(stacks, `${i}`, `${i + 1}`);
-              }
-              _removeStacks(stacks, `${position}`);
-              _addStackTrace(stacks, `${position}`);
-            }
-          }
-        }
-        const rv = insertBefore.call(this, newChild, refChild);
-        cn.$$$REINSTRUMENT$$$();
-        return rv;
-      };
+  //     const textContent = Object.getOwnPropertyDescriptor(
+  //       Node.prototype,
+  //       "textContent"
+  //     );
+  //     // textContent: Pass in a string. Replaces all children w/ a single text node.
+  //     Object.defineProperty(Node.prototype, "textContent", {
+  //       get: textContent.get,
+  //       set: function(this: Node, v: any) {
+  //         const rv = textContent.set.call(this, v);
+  //         const cn = this.childNodes;
+  //         if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //           const traces = getProxyStackTraces(cn);
+  //           traces.clear();
+  //           _initializeMap(cn, traces, _getStackTrace());
+  //         }
+  //         this.childNodes.$$$REINSTRUMENT$$$();
+  //         return rv;
+  //       },
+  //       enumerable: true,
+  //       configurable: true
+  //     });
 
-      const normalize = Node.prototype.normalize;
-      function normalizeInternal(n: Node): void {
-        const children = n.childNodes;
-        const len = children.length;
-        const stacks = getProxyStackTraces(n.childNodes);
-        let prevTextNode: Node = null;
-        let prevTextNodeI: number = -1;
-        let toRemove: number[] = [];
-        for (let i = 0; i < len; i++) {
-          const child = children[i];
-          if (child.nodeType === Node.TEXT_NODE) {
-            if (child.textContent === "") {
-              // Remove empty text nodes.
-              toRemove.push(i);
-            } else if (prevTextNode) {
-              // Merge adjacent text nodes.
-              prevTextNode.textContent += child.textContent;
-              if (stacks) {
-                _combineStacks(stacks, `${prevTextNodeI}`, `${i}`);
-              }
-              toRemove.push(i);
-            } else {
-              prevTextNode = child;
-              prevTextNodeI = i;
-            }
-          } else {
-            prevTextNode = null;
-            prevTextNodeI = -1;
-          }
-        }
-        const removeLen = toRemove.length;
-        for (let i = removeLen - 1; i >= 0; i--) {
-          n.removeChild(children[toRemove[i]]);
-        }
-        const len2 = children.length;
-        for (let i = 0; i < len2; i++) {
-          normalizeInternal(children[i]);
-        }
-      }
-      Node.prototype.normalize = function(this: Node): void {
-        /**
-         * The Node.normalize() method puts the specified node and all of its sub-tree into a
-         * "normalized" form. In a normalized sub-tree, no text nodes in the sub-tree are empty
-         * and there are no adjacent text nodes.
-         */
-        if (this.$$$TREE$$$) {
-          normalizeInternal(this);
-          this.$$$REINSTRUMENT$$$();
-        } else {
-          return normalize.call(this);
-        }
-      };
+  //     const appendChild = Node.prototype.appendChild;
+  //     Node.prototype.appendChild = function<T extends Node>(
+  //       this: Node,
+  //       newChild: T
+  //     ): T {
+  //       /**
+  //        * The Node.appendChild() method adds a node to the end of the list of children of a specified parent node.
+  //        * If the given child is a reference to an existing node in the document,
+  //        * appendChild() moves it from its current position to the new position.
+  //        */
+  //       if (newChild.parentNode !== null) {
+  //         newChild.parentNode.removeChild(newChild);
+  //       }
 
-      const removeChild = Node.prototype.removeChild;
-      Node.prototype.removeChild = function<T extends Node>(
-        this: Node,
-        child: T
-      ): T {
-        const cn = this.childNodes;
-        if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-          const stacks = getProxyStackTraces(cn);
-          const children = this.childNodes;
-          const len = children.length;
-          let i = 0;
-          for (; i < len; i++) {
-            if ($$$SEQ$$$(children[i], child)) {
-              break;
-            }
-          }
-          if (i === len) {
-            logToConsole(`Invalid call to removeChild.`);
-          } else {
-            for (let j = i + 1; j < len; j++) {
-              _copyStacks(stacks, `${j}`, `${j - 1}`);
-            }
-            _removeStacks(stacks, `${len - 1}`);
-          }
-        }
-        const rv = removeChild.call(this, child);
-        cn.$$$REINSTRUMENT$$$();
-        return rv;
-      };
+  //       const cn = this.childNodes;
+  //       if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //         const traces = getProxyStackTraces(cn);
+  //         _addStackTrace(traces, `${cn.length}`);
+  //       }
 
-      // replaceChild: Replaces a child.
-      const replaceChild = Node.prototype.replaceChild;
-      Node.prototype.replaceChild = function<T extends Node>(
-        this: Node,
-        newChild: Node,
-        oldChild: T
-      ): T {
-        const cn = this.childNodes;
-        if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-          const stacks = getProxyStackTraces(cn);
-          let i = 0;
-          const len = cn.length;
-          for (; i < len; i++) {
-            if ($$$SEQ$$$(cn[i], oldChild)) {
-              break;
-            }
-          }
-          if (i === len) {
-            logToConsole(`replaceChild called with invalid child`);
-          } else {
-            _addStackTrace(stacks, `${i}`);
-          }
-        }
-        const rv = replaceChild.call(this, newChild, oldChild);
-        cn.$$$REINSTRUMENT$$$();
-        return rv;
-      };
+  //       const rv = appendChild.call(this, newChild);
+  //       cn.$$$REINSTRUMENT$$$();
+  //       return rv;
+  //     };
 
-      const innerHTML = Object.getOwnPropertyDescriptor(
-        Element.prototype,
-        "innerHTML"
-      );
-      Object.defineProperty(Element.prototype, "innerHTML", {
-        get: innerHTML.get,
-        set: function(this: Element, t: string): boolean {
-          const rv = innerHTML.set.call(this, t);
-          const cn = this.childNodes;
-          if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
-            const stacks = getProxyStackTraces(cn);
-            stacks.clear();
-            _initializeMap(cn, stacks, _getStackTrace());
-          }
-          cn.$$$REINSTRUMENT$$$();
-          return rv;
-        },
-        configurable: true,
-        enumerable: true
-      });
-    }
-  }
+  //     const insertBefore = Node.prototype.insertBefore;
+  //     // insertBefore: Takes Nodes. Modifies DOM.
+  //     Node.prototype.insertBefore = function<T extends Node>(
+  //       newChild: T,
+  //       refChild: Node
+  //     ): T {
+  //       /**
+  //        * The Node.insertBefore() method inserts the specified node before the reference
+  //        * node as a child of the current node.
+  //        *
+  //        * If referenceNode is null, the newNode is inserted at the end of the list of child nodes.
+  //        *
+  //        * Note that referenceNode is not an optional parameter -- you must explicitly pass a Node
+  //        * or null. Failing to provide it or passing invalid values may behave differently in
+  //        * different browser versions.
+  //        */
+  //       const cn = this.childNodes;
+  //       if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //         if (refChild === null) {
+  //           // Avoid tracking stack traces for special case.
+  //           return this.appendChild(newChild);
+  //         } else {
+  //           const stacks = getProxyStackTraces(cn);
+  //           const len = cn.length;
+  //           let position = -1;
+  //           for (let i = 0; i < len; i++) {
+  //             if ($$$SEQ$$$(cn[i], refChild)) {
+  //               position = i;
+  //               break;
+  //             }
+  //           }
+  //           if (position === -1) {
+  //             logToConsole(`insertBefore called with invalid node!`);
+  //           } else {
+  //             for (let i = len - 1; i >= position; i--) {
+  //               _copyStacks(stacks, `${i}`, `${i + 1}`);
+  //             }
+  //             _removeStacks(stacks, `${position}`);
+  //             _addStackTrace(stacks, `${position}`);
+  //           }
+  //         }
+  //       }
+  //       const rv = insertBefore.call(this, newChild, refChild);
+  //       cn.$$$REINSTRUMENT$$$();
+  //       return rv;
+  //     };
+
+  //     const normalize = Node.prototype.normalize;
+  //     function normalizeInternal(n: Node): void {
+  //       const children = n.childNodes;
+  //       const len = children.length;
+  //       const stacks = getProxyStackTraces(n.childNodes);
+  //       let prevTextNode: Node = null;
+  //       let prevTextNodeI: number = -1;
+  //       let toRemove: number[] = [];
+  //       for (let i = 0; i < len; i++) {
+  //         const child = children[i];
+  //         if (child.nodeType === Node.TEXT_NODE) {
+  //           if (child.textContent === "") {
+  //             // Remove empty text nodes.
+  //             toRemove.push(i);
+  //           } else if (prevTextNode) {
+  //             // Merge adjacent text nodes.
+  //             prevTextNode.textContent += child.textContent;
+  //             if (stacks) {
+  //               _combineStacks(stacks, `${prevTextNodeI}`, `${i}`);
+  //             }
+  //             toRemove.push(i);
+  //           } else {
+  //             prevTextNode = child;
+  //             prevTextNodeI = i;
+  //           }
+  //         } else {
+  //           prevTextNode = null;
+  //           prevTextNodeI = -1;
+  //         }
+  //       }
+  //       const removeLen = toRemove.length;
+  //       for (let i = removeLen - 1; i >= 0; i--) {
+  //         n.removeChild(children[toRemove[i]]);
+  //       }
+  //       const len2 = children.length;
+  //       for (let i = 0; i < len2; i++) {
+  //         normalizeInternal(children[i]);
+  //       }
+  //     }
+  //     Node.prototype.normalize = function(this: Node): void {
+  //       /**
+  //        * The Node.normalize() method puts the specified node and all of its sub-tree into a
+  //        * "normalized" form. In a normalized sub-tree, no text nodes in the sub-tree are empty
+  //        * and there are no adjacent text nodes.
+  //        */
+  //       if (this.$$$TREE$$$) {
+  //         normalizeInternal(this);
+  //         this.$$$REINSTRUMENT$$$();
+  //       } else {
+  //         return normalize.call(this);
+  //       }
+  //     };
+
+  //     const removeChild = Node.prototype.removeChild;
+  //     Node.prototype.removeChild = function<T extends Node>(
+  //       this: Node,
+  //       child: T
+  //     ): T {
+  //       const cn = this.childNodes;
+  //       if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //         const stacks = getProxyStackTraces(cn);
+  //         const children = this.childNodes;
+  //         const len = children.length;
+  //         let i = 0;
+  //         for (; i < len; i++) {
+  //           if ($$$SEQ$$$(children[i], child)) {
+  //             break;
+  //           }
+  //         }
+  //         if (i === len) {
+  //           logToConsole(`Invalid call to removeChild.`);
+  //         } else {
+  //           for (let j = i + 1; j < len; j++) {
+  //             _copyStacks(stacks, `${j}`, `${j - 1}`);
+  //           }
+  //           _removeStacks(stacks, `${len - 1}`);
+  //         }
+  //       }
+  //       const rv = removeChild.call(this, child);
+  //       cn.$$$REINSTRUMENT$$$();
+  //       return rv;
+  //     };
+
+  //     // replaceChild: Replaces a child.
+  //     const replaceChild = Node.prototype.replaceChild;
+  //     Node.prototype.replaceChild = function<T extends Node>(
+  //       this: Node,
+  //       newChild: Node,
+  //       oldChild: T
+  //     ): T {
+  //       const cn = this.childNodes;
+  //       if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //         const stacks = getProxyStackTraces(cn);
+  //         let i = 0;
+  //         const len = cn.length;
+  //         for (; i < len; i++) {
+  //           if ($$$SEQ$$$(cn[i], oldChild)) {
+  //             break;
+  //           }
+  //         }
+  //         if (i === len) {
+  //           logToConsole(`replaceChild called with invalid child`);
+  //         } else {
+  //           _addStackTrace(stacks, `${i}`);
+  //         }
+  //       }
+  //       const rv = replaceChild.call(this, newChild, oldChild);
+  //       cn.$$$REINSTRUMENT$$$();
+  //       return rv;
+  //     };
+
+  //     const innerHTML = Object.getOwnPropertyDescriptor(
+  //       Element.prototype,
+  //       "innerHTML"
+  //     );
+  //     Object.defineProperty(Element.prototype, "innerHTML", {
+  //       get: innerHTML.get,
+  //       set: function(this: Element, t: string): boolean {
+  //         const rv = innerHTML.set.call(this, t);
+  //         const cn = this.childNodes;
+  //         if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //           const stacks = getProxyStackTraces(cn);
+  //           stacks.clear();
+  //           _initializeMap(cn, stacks, _getStackTrace());
+  //         }
+  //         cn.$$$REINSTRUMENT$$$();
+  //         return rv;
+  //       },
+  //       configurable: true,
+  //       enumerable: true
+  //     });
+
+  //     const outerHTML = Object.getOwnPropertyDescriptor(
+  //       Element.prototype,
+  //       "outerHTML"
+  //     );
+  //     Object.defineProperty(Element.prototype, "outerHTML", {
+  //       get: outerHTML.get,
+  //       set: function(this: Element, v: string): boolean {
+  //         const parent = this.parentNode;
+  //         if (parent) {
+  //           const parentCn = parent.childNodes;
+  //           if (getProxyStatus(parentCn) === ProxyStatus.IS_PROXY) {
+  //             const len = parentCn.length;
+  //             let i = 0;
+  //             for (; i < len; i++) {
+  //               if (parentCn[i] === this) {
+  //                 break;
+  //               }
+  //             }
+  //             if (i === len) {
+  //               logToConsole(`Invalid call to outerHTML: Detached node?`);
+  //             } else {
+  //               const stacks = getProxyStackTraces(parentCn);
+  //               _removeStacks(stacks, `${i}`);
+  //               _addStackTrace(stacks, `${i}`);
+  //             }
+  //           }
+  //         }
+  //         const rv = outerHTML.set.call(this, v);
+  //         if (parent) {
+  //           parent.childNodes.$$$REINSTRUMENT$$$();
+  //         }
+  //         return rv;
+  //       },
+  //       configurable: true,
+  //       enumerable: true
+  //     });
+
+  //     function insertAdjacentHelper(
+  //       e: Element,
+  //       position: InsertPosition
+  //     ): void {
+  //       switch (position) {
+  //         case "beforebegin":
+  //         case "afterend": {
+  //           if (
+  //             e.parentNode &&
+  //             getProxyStatus(e.parentNode.childNodes) === ProxyStatus.IS_PROXY
+  //           ) {
+  //             const parent = e.parentNode;
+  //             const siblings = parent.childNodes;
+  //             const numSiblings = siblings.length;
+  //             let i = 0;
+  //             for (; i < numSiblings; i++) {
+  //               if ($$$SEQ$$$(siblings[i], e)) {
+  //                 break;
+  //               }
+  //             }
+  //             if (i !== numSiblings) {
+  //               // Does it shift things down before or after this element?
+  //               let start = position === "beforebegin" ? i : i + 1;
+  //               const stacks = getProxyStackTraces(siblings);
+  //               for (i = numSiblings - 1; i >= start; i--) {
+  //                 _copyStacks(stacks, `${i}`, `${i + 1}`);
+  //               }
+  //               _removeStacks(stacks, `${start}`);
+  //               _addStackTrace(stacks, `${start}`);
+  //             }
+  //           }
+  //           break;
+  //         }
+  //         case "afterbegin":
+  //         case "beforeend": {
+  //           const cn = e.childNodes;
+  //           if (getProxyStatus(cn) === ProxyStatus.IS_PROXY) {
+  //             const numChildren = cn.length;
+  //             const stacks = getProxyStackTraces(cn);
+  //             if (position === "afterbegin") {
+  //               for (let i = numChildren - 1; i >= 0; i--) {
+  //                 _copyStacks(stacks, `${i}`, `${i + 1}`);
+  //               }
+  //               _removeStacks(stacks, `0`);
+  //               _addStackTrace(stacks, `0`);
+  //             } else {
+  //               _addStackTrace(stacks, `${numChildren}`);
+  //             }
+  //           }
+  //           break;
+  //         }
+  //       }
+  //     }
+
+  //     const insertAdjacentElement = Element.prototype.insertAdjacentElement;
+  //     Element.prototype.insertAdjacentElement = function(
+  //       position: InsertPosition,
+  //       insertedElement: Element
+  //     ): Element {
+  //       /**
+  //        * The insertAdjacentElement() method inserts a given element node at a given
+  //        * position relative to the element it is invoked upon.
+  //        */
+  //       insertAdjacentHelper(this, position);
+
+  //       const rv = insertAdjacentElement.call(this, position, insertedElement);
+  //       if (position === "afterbegin" || position === "beforeend") {
+  //         this.childNodes.$$$REINSTRUMENT$$$();
+  //       } else if (this.parentNode) {
+  //         this.parentNode.childNodes.$$$REINSTRUMENT$$$();
+  //       }
+  //       return rv;
+  //     };
+
+  //     const insertAdjacentHTML = Element.prototype.insertAdjacentHTML;
+  //     Element.prototype.insertAdjacentHTML = function(
+  //       this: Element,
+  //       where: InsertPosition,
+  //       html: string
+  //     ): void {
+  //       insertAdjacentHelper(this, where);
+  //       const rv = insertAdjacentHTML.call(this, where, html);
+  //       if (where === "afterbegin" || where === "beforeend") {
+  //         this.childNodes.$$$REINSTRUMENT$$$();
+  //       } else if (this.parentNode) {
+  //         this.parentNode.childNodes.$$$REINSTRUMENT$$$();
+  //       }
+  //       return rv;
+  //     };
+
+  //     const insertAdjacentText = Element.prototype.insertAdjacentText;
+  //     Element.prototype.insertAdjacentText = function(
+  //       this: Element,
+  //       where: InsertPosition,
+  //       text: string
+  //     ): void {
+  //       insertAdjacentHelper(this, where);
+  //       const rv = insertAdjacentText.call(this, where, text);
+  //       if (where === "afterbegin" || where === "beforeend") {
+  //         this.childNodes.$$$REINSTRUMENT$$$();
+  //       } else if (this.parentNode) {
+  //         this.parentNode.childNodes.$$$REINSTRUMENT$$$();
+  //       }
+  //       return rv;
+  //     };
+
+  //     const remove = Element.prototype.remove;
+  //     Element.prototype.remove = function(this: Element): void {
+  //       const parent = this.parentNode;
+  //       if (parent) {
+  //         parent.removeChild(this);
+  //       } else {
+  //         remove.call(this);
+  //       }
+  //     };
+
+  //     // TODO: Support Element/SVGElement.dataset, which modifies properties on DOM object.
+  //   }
+  // }
 })();
