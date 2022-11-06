@@ -11,8 +11,7 @@ export function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
-        obj[Math.random()] = Math.random();
-		console.log("in loop");
+      obj[Math.random()] = Math.random();
     }
     console.log("memory leaking...");
 }
