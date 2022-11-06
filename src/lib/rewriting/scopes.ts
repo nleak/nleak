@@ -78,11 +78,6 @@ export class GlobalScope implements IScope {
   }
   public prelude(): ExpressionStatement[] {
     const rv: ExpressionStatement[] = [];
-    console.log("-----GlobalScope.prelude-----");
-    console.log(this._defineFunctionDeclsOnScope);
-    console.log(this._vars);
-
-    console.log("-----GlobalScope.prelude-----");
 
     if (this._defineFunctionDeclsOnScope) {
       // scopeidentifier.foo

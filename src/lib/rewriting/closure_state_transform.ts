@@ -28,11 +28,6 @@ function exposeClosureStateInternal(
   strictMode?: boolean
 ): string {
   let ast = parseJavaScript(source, { loc: true }); //ECMAScript parser
-  console.log("----------");
-  // console.log(source);
-  console.log(ast);
-  // console.log(ast.body[0].constructor.name);
-  console.log("----------");
 
   {
     const firstStatement = ast.body[0];
@@ -45,15 +40,9 @@ function exposeClosureStateInternal(
   }
 
   const map = new Map<Program | BlockStatement, BlockScope>();
-  // console.log("-----map----");
-  // console.log(map); //empty
-  // console.log("-----map----");
 
   const symbols = new Set<string>();
   let globalScope = undefined;
-  // console.log("---evalScopeName---");
-  // console.log(evalScopeName); // undefined
-  // console.log("---evalScopeName---");
 
   if (evalScopeName) {
     globalScope = new ProxyScope(evalScopeName, strictMode === false);
@@ -64,34 +53,8 @@ function exposeClosureStateInternal(
   }
 
   ast = ScopeScanningVisitor.Visit(ast, map, symbols, globalScope);
-  console.log(
-    "============= after ScopeScanningVisitor.Visit =============",
-    map,
-    symbols,
-    globalScope
-  );
   ast = EscapeAnalysisVisitor.Visit(ast, map);
-  console.log(
-    "============= after EscapeAnalysisVisitor.Visit =============",
-    map
-  );
   ast = ScopeCreationVisitor.Visit(ast, map, symbols, agentUrl, polyfillUrl);
-  console.log(
-    "============= after ScopeCreationVisitor.Visit =============",
-    map, symbols, agentUrl, polyfillUrl
-  );
-
-  console.log("----ast after visit start-----");
-  console.log(JSON.stringify(ast, null, 2));
-  console.log("----ast after visit end-----");
-  console.log(sourceMap);
-  console.log("----map-----");
-  console.log(map);
-  console.log("----symbols-----");
-  console.log(symbols);
-  console.log("---- generateJavaScript -----");
-  console.log(generateJavaScript(ast, { sourceMap }));
-  console.log("---- generateJavaScript -----");
 
   return generateJavaScript(ast, { sourceMap });
 }

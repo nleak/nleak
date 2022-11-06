@@ -114,13 +114,6 @@ abstract class Visitor {
     let multipleStatementsEncountered = false;
     for (let i = 0; i < len; i++) {
       const s = st[i];
-      console.log("----this----");
-      console.log("====== s.type", s.type);
-      console.log(this);
-      console.log("----this----");
-      //TODO what is this casting?
-      // const newS = s;// (<any> this[s.type])(s);
-      // ts-ignore
       const newS = (<any>this[s.type])(s);
       if (newS === undefined) {
         console.log("Got undefined processing the following:");
@@ -753,10 +746,6 @@ export class ScopeScanningVisitor extends Visitor {
   public Program(p: Program): Program {
     const rv = super.Program(p);
     this._scopeMap.set(rv, this._scope);
-    console.log("------ScopeScanningVisitor-----");
-    console.log(JSON.stringify(rv, null, 2));
-    console.log(this._scopeMap);
-    console.log("------ScopeScanningVisitor-----");
 
     return rv;
   }
@@ -1075,14 +1064,6 @@ export class EscapeAnalysisVisitor extends Visitor {
     this._scope = this._scopeMap.get(p);
     const rv = super.Program(p);
 
-    console.log("-----EscapeAnalysisVisitor Start------");
-    console.log(this._scope);
-    console.log(prev);
-    console.log(this._scope == prev);
-    console.log(JSON.stringify(rv) === JSON.stringify(p));
-    console.log(rv);
-    console.log("-----EscapeAnalysisVisitor End------");
-
     this._scope = prev;
     return rv;
   }
@@ -1160,13 +1141,6 @@ export class ScopeCreationVisitor extends Visitor {
       this._scope instanceof BlockScope && this._scope.hasClosedOverVariables
         ? [this._scope.getScopeCreationStatement()]
         : [];
-    console.log("----_insertScopeCreationAndFunctionScopeAssignments---");
-    console.log(this._scope);
-    console.log(this._scope instanceof GlobalScope);
-    console.log(this._scope instanceof BlockScope);
-
-    console.log("----_insertScopeCreationAndFunctionScopeAssignments---");
-
     if (this._scope instanceof GlobalScope) {
       mods = mods.concat(this._scope.prelude());
     }
@@ -1199,12 +1173,6 @@ export class ScopeCreationVisitor extends Visitor {
     p.body = <any>(
       this._insertScopeCreationAndFunctionScopeAssignments(p.body)
     );
-
-    console.log(JSON.stringify(rv) === JSON.stringify(p));
-    console.log(rv);
-    console.log(p);
-
-    console.log("------ScopeCreationVisitor----");
 
     this._scope = null;
     return rv;
