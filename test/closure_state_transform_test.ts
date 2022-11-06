@@ -1,4 +1,4 @@
-import { exposeClosureState } from "../src/lib/closure_state_transform";
+import { exposeClosureState } from "../src/lib/rewriting/closure_state_transform";
 // import {SourceMapGenerator, SourceMapConsumer, RawSourceMap} from 'source-map';
 
 // const sourceMap = new SourceMapGenerator({});
