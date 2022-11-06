@@ -69,17 +69,7 @@ import {
   ExportSpecifier,
   AwaitExpression,
 } from "estree";
-import { parseScript as parseJavaScript } from "esprima";
-import { generate as generateJavaScript } from "astring";
-import {
-  SourceMapGenerator,
-  SourceMapConsumer,
-  RawSourceMap,
-} from "source-map";
-import { transform as buble } from "buble";
-//import {transform as babel} from 'babel-core';
-import { loadPartialConfig, transform as babel } from "@babel/core";
-import { dirname } from "path";
+
 import {
   declarationFromDeclarators,
   getAgentInsertion,
@@ -1163,8 +1153,8 @@ export class ScopeCreationVisitor extends Visitor {
   }
 
   protected _insertScopeCreationAndFunctionScopeAssignments(
-    n: Node[],
-    isProgram: boolean
+    n: Node[]
+    // isProgram: boolean
   ): Node[] {
     let mods: Node[] =
       this._scope instanceof BlockScope && this._scope.hasClosedOverVariables
@@ -1180,13 +1170,18 @@ export class ScopeCreationVisitor extends Visitor {
     if (this._scope instanceof GlobalScope) {
       mods = mods.concat(this._scope.prelude());
     }
-    if (isProgram) {
-      const insertions = [getAgentInsertion(this._agentUrl)];
-      if (this._polyfillUrl !== null) {
-        insertions.push(getPolyfillInsertion(this._polyfillUrl));
-      }
-      mods = (<Node[]>[getProgramPrelude(insertions)]).concat(mods);
-    }
+
+    // Note from nleak team: we don't need to do this kind of insert agent.js
+    // and polyfill.js with XHR fetching, because we will use require() to load
+    // them in the nleak core runtime.
+    // if (isProgram) {
+    //   const insertions = [getAgentInsertion(this._agentUrl)];
+    //   if (this._polyfillUrl !== null) {
+    //     insertions.push(getPolyfillInsertion(this._polyfillUrl));
+    //   }
+    //   mods = (<Node[]>[getProgramPrelude(insertions)]).concat(mods);
+    // }
+
     mods = mods.concat(this._scope.getScopeAssignments());
     if (mods.length === 0) {
       return n;
@@ -1200,12 +1195,12 @@ export class ScopeCreationVisitor extends Visitor {
     this._scope = this._scopeMap.get(p);
     this._scope.finalize(this._getNextScope);
     const rv = super.Program(p);
+
     p.body = <any>(
-      this._insertScopeCreationAndFunctionScopeAssignments(p.body, true)
+      this._insertScopeCreationAndFunctionScopeAssignments(p.body)
     );
 
-    console.log("------ScopeCreationVisitor----");
-    console.log(rv == p);
+    console.log(JSON.stringify(rv) === JSON.stringify(p));
     console.log(rv);
     console.log(p);
 
@@ -1221,7 +1216,7 @@ export class ScopeCreationVisitor extends Visitor {
     this._scope.finalize(this._getNextScope);
     const rv = super.BlockStatement(bs);
     rv.body = <any>(
-      this._insertScopeCreationAndFunctionScopeAssignments(rv.body, false)
+      this._insertScopeCreationAndFunctionScopeAssignments(rv.body)
     );
     this._scope = oldBs;
     return rv;

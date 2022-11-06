@@ -20,6 +20,10 @@ const test = 1;
 function makeFunc() {
   const name = 'Mozilla';
   function displayName() {
+    if (name === "foo") {
+      console.log("foo");
+    }
+    eval("console.log(name)");
     console.log(name);
   }
   return displayName;
@@ -30,7 +34,3 @@ myFunc();
 `;
 
 console.log(exposeClosureState("result.js", colsure_exp));
-
-// console.log(exposeClosureStateInternal("", "example/test.js", sourceMap, ));
-// console.log(exposeClosureState("", "example/test.js"));
-

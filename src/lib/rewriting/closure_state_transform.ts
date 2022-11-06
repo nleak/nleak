@@ -66,30 +66,30 @@ function exposeClosureStateInternal(
   ast = ScopeScanningVisitor.Visit(ast, map, symbols, globalScope);
   console.log(
     "============= after ScopeScanningVisitor.Visit =============",
+    map,
     symbols,
     globalScope
   );
   ast = EscapeAnalysisVisitor.Visit(ast, map);
+  console.log(
+    "============= after EscapeAnalysisVisitor.Visit =============",
+    map
+  );
   ast = ScopeCreationVisitor.Visit(ast, map, symbols, agentUrl, polyfillUrl);
+  console.log(
+    "============= after ScopeCreationVisitor.Visit =============",
+    map, symbols, agentUrl, polyfillUrl
+  );
 
-  //EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map);
-
-  // ScopeCreationVisitor.Visit(
-  //   EscapeAnalysisVisitor.Visit(ScopeScanningVisitor.Visit(ast, map, symbols, globalScope), map), map, symbols, agentUrl, polyfillUrl);
-  console.log("----ast after visit-----");
-
-  console.log(ast);
-  console.log(ast.body[0]);
-
-  console.log("----ast after visit-----");
+  console.log("----ast after visit start-----");
+  console.log(JSON.stringify(ast, null, 2));
+  console.log("----ast after visit end-----");
   console.log(sourceMap);
   console.log("----map-----");
   console.log(map);
   console.log("----symbols-----");
   console.log(symbols);
-
   console.log("---- generateJavaScript -----");
-
   console.log(generateJavaScript(ast, { sourceMap }));
   console.log("---- generateJavaScript -----");
 
