@@ -7,9 +7,10 @@
     "dev": "nodemon",
     "test:driver": "npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example",
     "test:find-leaks": "rm -rf build && npx tsc && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../test/example --guest-app-entry ../../test/example/guest_app.js",
-    "test": "npm run test:leak &&  npm run test:no-leak",
     "test:leak": "env mocha -r ts-node/register 'test/leak_test.ts'",
-    "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'"
+    "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'",
+    "test:unit": "env mocha -r ts-node/register 'test/*.ts' > unit_test.log",
+    "test": "npm run test:leak &&  npm run test:no-leak"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,11 @@
   },
   "homepage": "https://github.com/nleak/nleak#readme",
   "devDependencies": {
+    "@babel/core": "^7.19.6",
+    "@babel/preset-env": "^7.19.4",
+    "@babel/preset-react": "^7.18.6",
+    "@types/babel__core": "^7.1.19",
+    "@types/buble": "^0.20.1",
     "@types/chai": "^4.3.3",
     "@types/chrome-remote-interface": "^0.31.4",
     "@types/esprima": "^4.0.3",
@@ -44,11 +50,14 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "astring": "^1.8.3",
+    "buble": "^0.20.0",
     "chrome-remote-interface": "^0.31.3",
     "error-stack-parser": "^2.1.4",
     "esprima": "^4.0.1",
     "node-fetch": "^2.6.7",
     "progress": "^2.0.3",
+    "source-map-support": "^0.5.21",
     "yargs": "^17.6.0"
   }
 }
