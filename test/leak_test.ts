@@ -1,9 +1,9 @@
 import { Server as HTTPServer } from 'http';
 import createHTTPServer from './util/http_server';
-import NLeak from '../src/lib/nleak';
-import NodeDriver from '../src/lib/node_driver';
+import NLeak from '../src/nleak';
+import NodeDriver from '../src/node_driver';
 import { equal as assertEqual } from 'assert';
-import NopProgressBar from '../src/lib/nop_progress_bar';
+import NopProgressBar from '../src/nop_progress_bar';
 import NopLog from '../src/common/nop_log';
 import fs from "fs";
 import { join } from 'path';

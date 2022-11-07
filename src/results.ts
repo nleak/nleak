@@ -8,7 +8,7 @@ import {
   ISourceFileRepository,
   SnapshotSizeSummary,
   RankingEvaluation,
-} from "../common/interfaces";
+} from "./common/interfaces";
 import LeakRoot from "./leak_root";
 
 function leakRootToJSON(l: LeakRoot): ILeakRoot {

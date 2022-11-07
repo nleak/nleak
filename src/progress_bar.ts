@@ -1,7 +1,7 @@
 import ProgressBar from "progress";
 
-import { IProgressBar, OperationType } from "../common/interfaces";
-import { default as TimeLog, TimeLogEntry } from "../common/time_log";
+import { IProgressBar, OperationType } from "./common/interfaces";
+import { default as TimeLog, TimeLogEntry } from "./common/time_log";
 
 const START_TIME = process.hrtime();
 function getTimestamp(): number {

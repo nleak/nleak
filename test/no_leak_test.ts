@@ -1,16 +1,16 @@
 import {Server as HTTPServer} from 'http';
 import createHTTPServer from './util/http_server';
-import NLeak from '../src/lib/nleak';
-import NodeDriver from '../src/lib/node_driver';
+import NLeak from '../src/nleak';
+import NodeDriver from '../src/node_driver';
 import {equal as assertEqual} from 'assert';
-import NopProgressBar from '../src/lib/nop_progress_bar';
+import NopProgressBar from '../src/nop_progress_bar';
 import NopLog from '../src/common/nop_log';
 import fs from "fs";
 import { join } from 'path';
 
 const DEBUG = true;
 
-const no_leak_test = 
+const no_leak_test =
 `
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -104,7 +104,7 @@ describe('No Leak test', function() {
       function wrappedDone() {
         done(e);
       }
-  
+
       function shutdownProxy() {
         if (driver) {
           wrappedDone();
@@ -118,7 +118,7 @@ describe('No Leak test', function() {
           wrappedDone();
         }
       }
-    
+
       function shutdownHTTPServer() {
         if (httpServer) {
           httpServer.close((localE: any) => {

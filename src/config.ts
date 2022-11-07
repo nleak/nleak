@@ -1,10 +1,10 @@
-import { IBLeakConfig, StepType, Step } from "../common/interfaces";
+import { IBLeakConfig, StepType, Step } from "./common/interfaces";
 
 const DEFAULT_CONFIG: IBLeakConfig = {
   iterations: 8,
   rankingEvaluationIterations: 10,
   rankingEvaluationRuns: 5,
-  url: "http://127.0.0.1:8080/", //non-url: nodejs script? 
+  url: "http://127.0.0.1:8080/", //non-url: nodejs script?
   entry:"",
   fixedLeaks: [], //explore
   fixMap: {}, //explore

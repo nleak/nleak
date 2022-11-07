@@ -11,7 +11,7 @@
     "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'",
     "test:unit": "env mocha -r ts-node/register 'test/*.ts' > unit_test.log",
     "test:rewrite": "rm -rf build && npx tsc && node build/guest/wrapper.js",
-    "test:find-leak-with-rewrite": "rm -rf build && npx tsc && cp -r build/src/lib/rewriting build/test/example && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../ --guest-app-entry ../../test/example/wrapper.js",
+    "test:find-leak-with-rewrite": "rm -rf build && npx tsc && cp -r build/src/rewriting build/test/example && cd build/src/cli && node nleak.js run --config ../../test/example/config.js --out ../../ --guest-app-entry ../../test/example/wrapper.js",
     "test": "npm run test:leak &&  npm run test:no-leak"
   },
   "repository": {

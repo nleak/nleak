@@ -7,9 +7,9 @@ import fetch from 'node-fetch';
 
 //import config here
 
-import HeapSnapshotParser from "../lib/heap_snapshot_parser";
-import { Log, IDriver } from "../common/interfaces";
-import { wait } from "../common/util";
+import HeapSnapshotParser from "./heap_snapshot_parser";
+import { Log, IDriver } from "./common/interfaces";
+import { wait } from "./common/util";
 import BLeakConfig from "./config";
 
 interface ChildProcessResponse {

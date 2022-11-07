@@ -3,12 +3,12 @@ import { resolve, join } from "node:path";
 import { createGzip } from "node:zlib";
 import { CommandModule } from "yargs";
 
-import NLeak from "../../lib/nleak";
-import ProgressProgressBar from "../../lib/progress_bar";
-import BLeakResults from "../../lib/results";
-import NodeDriver from "../../lib/node_driver";
-import TextReporter from "../../lib/text_reporter";
-import BLeakConfig from "../../lib/config";
+import NLeak from "../../nleak";
+import ProgressProgressBar from "../../progress_bar";
+import BLeakResults from "../../results";
+import NodeDriver from "../../node_driver";
+import TextReporter from "../../text_reporter";
+import BLeakConfig from "../../config";
 
 const Run: CommandModule = {
   command: "run",

@@ -1,4 +1,4 @@
-import { HeapSnapshotContents } from "../common/interfaces";
+import { HeapSnapshotContents } from "./common/interfaces";
 
 const enum ParserState {
   // The parser has encountered an error and can no longer proceed.
