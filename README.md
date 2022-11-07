@@ -18,6 +18,10 @@ An automatical memory detection and diagnosis tool for NodeJS.
     + Testing guest app
     + ...
 
+## System Architecture
+
+<img width="1254" alt="image" src="https://user-images.githubusercontent.com/5697641/200388783-55ced4e0-103a-41f7-8535-db7359a99a8e.png">
+
 ### Local Development
 
 - `npm i`
