@@ -4,6 +4,20 @@
 
 An automatical memory detection and diagnosis tool for NodeJS.
 
+## Background
+
+- `core` folder contains all src code for `nleak-core`
+    + NodeJS driver
+    + Heap analysis
+    + Leak detection & debugging algorithms
+    + Reporter
+    + ...
+- `guest` folder contains all src code for running guest app in child NodeJS process
+    + Code rewriting logic
+    + Instrumental agent
+    + Testing guest app
+    + ...
+
 ### Local Development
 
 - `npm i`
