@@ -21,7 +21,7 @@ type SnapshotCb = (sn: HeapSnapshotParser, log: Log) => Promise<void>;
 export class OperationState {
   public results: BLeakResults = null;
   constructor(
-    public NodeDriver: NodeDriver,
+    public nodeDriver: NodeDriver,
     public progressBar: IProgressBar,
     public config: BLeakConfig
   ) {}
@@ -94,7 +94,7 @@ class NavigateOperation extends Operation {
 
   protected _run(opSt: OperationState): Promise<void> {
     return opSt.progressBar.timeEvent(OperationType.NAVIGATE, () => {
-      return opSt.NodeDriver.navigateTo(this._url);
+      return opSt.nodeDriver.navigateTo(this._url);
     });
   }
 }
@@ -121,7 +121,7 @@ class CheckOperation extends Operation {
     return opSt.progressBar.timeEvent(OperationType.WAIT_FOR_PAGE, async () => {
       // Wait until either the operation is canceled (timeout) or the check succeeds.
       while (!this._cancelled) {
-        const success = await opSt.NodeDriver.runCode<boolean>(
+        const success = await opSt.nodeDriver.runCode<boolean>(
           `typeof(BLeakConfig) !== "undefined" && BLeakConfig.${this._stepType}[${this._id}].check()`
         );
         if (success) {
@@ -149,7 +149,7 @@ class ParentCallNextOperation extends Operation {
   }
 
   public async _run(opSt: OperationState): Promise<void> {
-    return opSt.NodeDriver.callEndpoint<void>(
+    return opSt.nodeDriver.callEndpoint<void>(
       this._config,
       this._id,
     );
@@ -170,7 +170,7 @@ class NextOperation extends Operation {
   }
 
   public async _run(opSt: OperationState): Promise<void> {
-    return opSt.NodeDriver.runCode<void>(
+    return opSt.nodeDriver.runCode<void>(
       `BLeakConfig.${this._stepType}[${this._id}].next()`
     );
   }
@@ -202,27 +202,26 @@ class TakeHeapSnapshotOperation extends Operation {
   }
 
   public async _run(opSt: OperationState): Promise<void> {
-    const sn = opSt.NodeDriver.takeHeapSnapshot();
+    const sn = opSt.nodeDriver.takeHeapSnapshot();
     // TODO: double check the `sn` promise here
     // return this._snapshotCb(sn, opSt.progressBar);
     return this._snapshotCb(await sn, opSt.progressBar);
   }
 }
 
-// class ConfigureProxyOperation extends Operation {
-//   constructor(private _config: InterceptorConfig) {
-//     super();
-//   }
+class ConfigureRewriteOperation extends Operation {
+  constructor(private _rewriteEnabled: boolean) {
+    super();
+  }
 
-//   public get description(): string {
-//     return `Configuring the proxy`;
-//   }
+  public get description(): string {
+    return `Configure the rewrite for the guest application.`;
+  }
 
-//   public async _run(opSt: OperationState): Promise<void> {
-//     this._config.log = opSt.progressBar;
-//     opSt.NodeDriver.mitmProxy.cb = getInterceptor(this._config);
-//   }
-// }
+  public async _run(opSt: OperationState): Promise<void> {
+    opSt.nodeDriver.setRewrite(this._rewriteEnabled);
+  }
+}
 
 function countOperations(sumSoFar: number, next: Operation): number {
   return sumSoFar + next.size();
@@ -299,7 +298,7 @@ class InstrumentGrowingPathsOperation extends Operation {
   }
 
   public _run(opSt: OperationState): Promise<void> {
-    return opSt.NodeDriver.runCode<void>(
+    return opSt.nodeDriver.runCode<void>(
       `window.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
         toPathTree(opSt.results.leaks)
       )})`
@@ -406,14 +405,7 @@ class FindLeaks extends CompositeOperation {
 
     console.log("[DEBUG] FindLeaks constructor");
     this.children.push(
-      //   new ConfigureProxyOperation({
-      //     log: NopLog,
-      //     rewrite: false,
-      //     fixes: config.fixedLeaks,
-      //     disableAllRewrites: false,
-      //     fixRewriteFunction: config.rewrite,
-      //     config: config.getBrowserInjection()
-      //   }),
+      new ConfigureRewriteOperation(false),
       new ProgramRunOperation(
         config,
         true,
@@ -471,11 +463,11 @@ class GetGrowthStacksOperation extends Operation {
     return opSt.progressBar.timeEvent(
       OperationType.GET_GROWTH_STACKS,
       async () => {
-        // const traces = await opSt.NodeDriver.runCode<GrowingStackTraces>(
+        // const traces = await opSt.nodeDriver.runCode<GrowingStackTraces>(
         //   `window.$$$GET_STACK_TRACES$$$()`
         // );
         // TODO: port growthStacks to NodeJS
-        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.NodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
           // const stacks = growthStacks[index] || [];
@@ -493,14 +485,7 @@ class DiagnoseLeaks extends CompositeOperation {
     super();
     console.log("[DEBUG] in DiagnoseLeaks");
     this.children.push(
-      //   new ConfigureProxyOperation({
-      //     log: NopLog,
-      //     rewrite: true,
-      //     fixes: config.fixedLeaks,
-      //     config: config.getBrowserInjection(),
-      //     fixRewriteFunction: config.rewrite
-      //   }),
-      // Warmup
+      new ConfigureRewriteOperation(true),
       new ProgramRunOperation(config, !isLoggedIn, 1, false),
       new InstrumentGrowingPathsOperation(config.timeout),
       new StepSeriesOperation(config, "loop"),
@@ -587,14 +572,7 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
       buffer.push(size);
     }
     this.children.push(
-      //   new ConfigureProxyOperation({
-      //     log: NopLog,
-      //     rewrite: false,
-      //     fixes: _rankingEvalConfig.fixIds,
-      //     disableAllRewrites: true,
-      //     fixRewriteFunction: config.rewrite,
-      //     config: config.getBrowserInjection()
-      //   }),
+      new ConfigureRewriteOperation(false),
       new ProgramRunOperation(
         config,
         false,

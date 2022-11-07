@@ -10,7 +10,9 @@ import { join } from 'path';
 
 const DEBUG = false;
 
-const leak_test =
+const guest_app_file_name = 'guest_app_test_leak.js';
+const wrapper_file_name = 'wrapper.js';
+const leak_test_guest_app =
 `
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -53,6 +55,24 @@ const server = http.createServer((req, res) => {
 });
 server.listen(port, hostname, () => {});
 `
+const leak_test_wrapper = 
+`
+var argv = require('yargs/yargs')(process.argv.slice(2)).argv;
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+
+// FIXME: update this wrapper when guest/wrapper.js is available
+Module.prototype.require = function(){
+  return originalRequire.apply(this, arguments);
+  // if (!argv.rewrite) {
+  //   return originalRequire.apply(this, arguments);
+  // } else {
+  //   return originalRequire.apply(this, arguments);
+  // }
+};
+
+require('./${guest_app_file_name}');
+`
 describe('Leak test', function () {
   this.timeout(60000);
   let httpServer: HTTPServer;
@@ -60,14 +80,18 @@ describe('Leak test', function () {
 
   before(async function () {
     console.log = () => {};
-    fs.writeFileSync(join(process.cwd(), "guest_app_test_leak.js"), leak_test, { encoding: 'utf-8' });
+    const guest_app_path = join(process.cwd(), guest_app_file_name);
+    const wrapper_path = join(process.cwd(), wrapper_file_name);
+    fs.writeFileSync(guest_app_path, leak_test_guest_app, { encoding: 'utf-8' });
+    fs.writeFileSync(wrapper_path, leak_test_wrapper, { encoding: 'utf-8' });
 
-    driver = await NodeDriver.Launch(NopLog, [], false, join(process.cwd(), "guest_app_test_leak.js"));
+    driver = await NodeDriver.Launch(NopLog, [], false, false, wrapper_path);
     await driver.takeHeapSnapshot();
   });
 
   function createStandardLeakTest(description: string, file_name: string, expected_leak: number): void {
     it("should be a leak", async function () {
+      console.log("aaaaaaa");
       const result = await NLeak.FindLeaks(`
       exports.url = "http://127.0.0.1:2333";
       // define entry point of sample-app
@@ -93,12 +117,15 @@ describe('Leak test', function () {
     });
   }
 
-  createStandardLeakTest('Catches leaks', 'guest_app_test_leak.js', 1);
+  createStandardLeakTest('Catches leaks', guest_app_file_name, 1);
 
   after(function (done) {
-    fs.unlink('guest_app_test_leak.js', (err) => {
+    fs.unlink(guest_app_file_name, (err) => {
       if (err) throw err;
       // console.debug('guest_app_test_leak.js was deleted');
+    });
+    fs.unlink(wrapper_file_name, (err) => {
+      if (err) throw err;
     });
     // Shutdown both HTTP server and proxy.
     let e: any = null;

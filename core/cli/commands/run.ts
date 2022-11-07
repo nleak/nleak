@@ -81,7 +81,7 @@ const Run: CommandModule = {
 
       writeFileSync(join(args.out, "config.js"), configFileSource);
       //here we should pass the absPath of sample_app.js.
-      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], true, guestAppEntryPath);
+      nodeDriver = await NodeDriver.Launch(progressBarLogger, [], false, true, guestAppEntryPath);
 
       // Test driver snippet, need to removed
       await nodeDriver.takeHeapSnapshot();
