@@ -1,5 +1,5 @@
-import {IProgressBar} from '../common/interfaces';
-import {NopLog} from '../common/nop_log';
+import {IProgressBar} from './common/interfaces';
+import {NopLog} from './common/nop_log';
 
 /**
  * A progress bar that does nothing.

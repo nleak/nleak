@@ -7,12 +7,12 @@ import {
   GrowthStatus,
   Log,
   OperationType,
-} from "../common/interfaces";
+} from "./common/interfaces";
 import {
   default as HeapSnapshotParser,
   DataTypes,
 } from "./heap_snapshot_parser";
-import { OneBitArray, TwoBitArray } from "../common/util";
+import { OneBitArray, TwoBitArray } from "./common/util";
 import LeakRoot from "./leak_root";
 
 /**

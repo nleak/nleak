@@ -1,4 +1,4 @@
-import { test } from "../src/lib/nleak_agent_transform";
+import { test } from "../guest/rewriting/nleak_agent_transform";
 
 // console.log(test());
 

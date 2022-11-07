@@ -5,16 +5,16 @@ import {
   IProgressBar,
   OperationType,
   Log,
-} from "../common/interfaces";
+} from "./common/interfaces";
 import BLeakConfig from "./config";
-import { wait } from "../common/util";
+import { wait } from "./common/util";
 import HeapSnapshotParser from "./heap_snapshot_parser";
 // import {InterceptorConfig, default as getInterceptor} from './mitmproxy_interceptor';
 import BLeakResults from "./results";
 import { HeapGrowthTracker, HeapGraph, toPathTree } from "./growth_graph";
 // import StackFrameConverter from './stack_frame_converter';
 import PathToString from "./path_to_string";
-import NopLog from "../common/nop_log";
+import NopLog from "./common/nop_log";
 
 type SnapshotCb = (sn: HeapSnapshotParser, log: Log) => Promise<void>;
 

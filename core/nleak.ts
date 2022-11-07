@@ -1,4 +1,4 @@
-import { IProgressBar } from "../common/interfaces";
+import { IProgressBar } from "./common/interfaces";
 import HeapSnapshotParser from "./heap_snapshot_parser";
 import NodeDriver from "./node_driver";
 import BLeakResults from "./results";

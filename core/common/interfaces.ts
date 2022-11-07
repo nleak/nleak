@@ -1,5 +1,5 @@
 // import MITMProxy from 'mitmproxy';
-import HeapSnapshotParser from '../lib/heap_snapshot_parser';
+import HeapSnapshotParser from '../heap_snapshot_parser';
 import TimeLog from './time_log';
 
 /**

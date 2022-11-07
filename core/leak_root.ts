@@ -1,4 +1,4 @@
-import { ILeakRoot, ILeakScores, IStack, IPath } from "../common/interfaces";
+import { ILeakRoot, ILeakScores, IStack, IPath } from "./common/interfaces";
 
 /**
  * Represents a leak root in a BLeak report.

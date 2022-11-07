@@ -1,4 +1,4 @@
-import { IPath } from "../common/interfaces";
+import { IPath } from "./common/interfaces";
 
 const r = /'/g;
 /**
