@@ -1,17 +1,21 @@
-//after canchen/wenting done their parts, theyll change rewritingOn
-//runnable nodejs script which will call the sample_app.js
-//export funcs from sample_app.js
+const Module = require('module');
+const fs = require('fs')
+const originalRequire = Module.prototype.require;
 
-import { leaking } from './guest_app';
+Module.prototype.require = function(){
+  const fileName = arguments['0'];
+  try {
+    const filePath = require.resolve(fileName);
+    if (!fs.existsSync(filePath)) {
+        throw 'Non-local module required.';
+    }
+    const srcStr = fs.readFileSync(filePath).toString();
+    const constructor = new module.constructor();
+    constructor._compile(srcStr.replace('memory leaking...', 'no leaking...'), fileName);
+    return constructor.exports;
+  } catch {
+    return originalRequire.apply(this, arguments);
+  }
+};
 
-//issues: path, wrapper, config
-
-const { boolean } = require('yargs');
-const agent = require('./agent');
-
-var rewritingOn = new Boolean(false);
-const app = rewritingOn ? own_require(sample.app) : require(sample.app);
-
-for(let i=0;i<10;i++){
-	leaking();
-}
+const guestApp = require('./guest_app.js');

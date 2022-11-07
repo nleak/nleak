@@ -7,7 +7,7 @@ const port = 2333;
 
 var obj = {};
 var power = 2;
-export function leaking() {
+function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
