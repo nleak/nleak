@@ -88,14 +88,14 @@ declare function importScripts(s: string): void;
  */
 (function() {
   // Global variables.
-  const IS_WINDOW = typeof window !== "undefined";
-  const IS_WORKER = typeof importScripts !== "undefined";
-  // const ROOT = <Window>(IS_WINDOW ? window : IS_WORKER ? self : global);
   const ROOT = global as any;
+
   // Avoid installing self twice.
   if (ROOT.$$$INSTRUMENT_PATHS$$$) {
     return;
   }
+
+  ROOT.$$$TEST_OUTPUT$$$ = $$$TEST_OUTPUT$$$;
   ROOT.$$$INSTRUMENT_PATHS$$$ = $$$INSTRUMENT_PATHS$$$;
   ROOT.$$$GET_STACK_TRACES$$$ = $$$GET_STACK_TRACES$$$;
   ROOT.$$$CREATE_SCOPE_OBJECT$$$ = $$$CREATE_SCOPE_OBJECT$$$;
@@ -109,12 +109,13 @@ declare function importScripts(s: string): void;
   ROOT.$$$FUNCTION_EXPRESSION$$$ = $$$FUNCTION_EXPRESSION$$$;
   ROOT.$$$OBJECT_EXPRESSION$$$ = $$$OBJECT_EXPRESSION$$$;
   ROOT.$$$CREATE_WITH_SCOPE$$$ = $$$CREATE_WITH_SCOPE$$$;
-  ROOT.$$$SERIALIZE_DOM$$$ = $$$SERIALIZE_DOM$$$;
+  // ROOT.$$$SERIALIZE_DOM$$$ = $$$SERIALIZE_DOM$$$; // TODO: DOM related to be removed.
   // Some programs define local variables named 'Object'.
   ROOT.$$$OBJECT$$$ = Object;
 
   const r = /'/g;
-  // Some websites overwrite console.log, so grab a reference for debug logging.
+  // BLeak: Some websites overwrite console.log, so grab a reference for debug logging.
+  // TODO: could be removed?
   const console = ROOT.console ? ROOT.console : { log: (str: string) => {} };
   const consoleLog = console.log;
   function logToConsole(s: string) {
@@ -142,6 +143,10 @@ declare function importScripts(s: string): void;
 
   // Some websites overwrite Object.create.
   const objectCreate = Object.create;
+
+  function $$$TEST_OUTPUT$$$(){
+    console.log('\n\n=============== $$$TEST_OUTPUT$$$ ===============\n\n');
+  }
 
   /**
    * Creates a scope object.
@@ -447,6 +452,7 @@ declare function importScripts(s: string): void;
   /**
    * Serializes the DOM into a JavaScript-visible tree structure.
    */
+  // TODO: is this needed in NodeJS?
   function $$$SERIALIZE_DOM$$$(): void {
     // ROOT.$$$DOM$$$ = makeMirrorNode(document);
   }
@@ -897,8 +903,10 @@ declare function importScripts(s: string): void;
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
     for (const tree of trees) {
       if (isDOMRoot(tree)) {
+        console.log("Will instrumenting DOMTree");
         instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
       } else {
+        console.log("Will instrumenting tree");
         instrumentTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
       }
     }
