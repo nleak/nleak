@@ -1,4 +1,4 @@
-import { exposeClosureState } from "../src/lib/rewriting/closure_state_transform";
+import { exposeClosureState } from "../guest/rewriting/closure_state_transform";
 
 let colsure_exp =
 `
