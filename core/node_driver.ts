@@ -27,7 +27,10 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
       if (rewriteEnabled) {
         process_args.push("--rewrite");
       }
-      _process = childProcess.spawn("node", process_args);
+      _process = childProcess.spawn("node", process_args, {
+        // https://nodejs.org/api/child_process.html#optionsstdio
+        stdio: ["pipe", "pipe", "pipe", "ipc"]
+      });
 
       // attach events
       _process.on("spawn", async () => {
@@ -62,6 +65,9 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         console.log(
           `PID[${_process.pid}] child process exited with code ${code}`
         );
+      });
+      process.on("exit", function() {
+        _process.kill();
       });
     } catch (error) {
       console.error("failed to spawn another NodeJS child process");

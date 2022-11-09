@@ -210,8 +210,9 @@ class TakeHeapSnapshotOperation extends Operation {
 }
 
 class ConfigureRewriteOperation extends Operation {
-  constructor(private _rewriteEnabled: boolean) {
-    super();
+  constructor(timeout: number, private _rewriteEnabled: boolean) {
+    super(timeout);
+    this._rewriteEnabled = _rewriteEnabled;
   }
 
   public get description(): string {
@@ -219,7 +220,7 @@ class ConfigureRewriteOperation extends Operation {
   }
 
   public async _run(opSt: OperationState): Promise<void> {
-    opSt.nodeDriver.setRewrite(this._rewriteEnabled);
+    return opSt.nodeDriver.setRewrite(this._rewriteEnabled);
   }
 }
 
@@ -298,11 +299,8 @@ class InstrumentGrowingPathsOperation extends Operation {
   }
 
   public _run(opSt: OperationState): Promise<void> {
-    return opSt.nodeDriver.runCode<void>(
-      `window.$$$INSTRUMENT_PATHS$$$(${JSON.stringify(
-        toPathTree(opSt.results.leaks)
-      )})`
-    );
+    console.log("[DEBUG] in InstrumentGrowingPathsOperation");
+    return opSt.nodeDriver.runCode<void>(`$$$INSTRUMENT_PATHS$$$(${JSON.stringify(toPathTree(opSt.results.leaks))})`);
   }
 }
 
@@ -405,7 +403,7 @@ class FindLeaks extends CompositeOperation {
 
     console.log("[DEBUG] FindLeaks constructor");
     this.children.push(
-      new ConfigureRewriteOperation(false),
+      new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
         true,
@@ -484,13 +482,16 @@ class DiagnoseLeaks extends CompositeOperation {
   constructor(config: BLeakConfig, isLoggedIn: boolean) {
     super();
     console.log("[DEBUG] in DiagnoseLeaks");
+    // FIXME: current included operations are only for testing
+    // include all operations when they're finished
     this.children.push(
-      new ConfigureRewriteOperation(true),
-      new ProgramRunOperation(config, !isLoggedIn, 1, false),
-      new InstrumentGrowingPathsOperation(config.timeout),
-      new StepSeriesOperation(config, "loop"),
-      new StepSeriesOperation(config, "loop"),
-      new GetGrowthStacksOperation(config.timeout)
+      new ConfigureRewriteOperation(config.timeout, true),
+      // new ProgramRunOperation(config, !isLoggedIn, 1, false),
+      // FIXME: adding InstrumentGrowingPathsOperation will cause test:leak fail.
+      // new InstrumentGrowingPathsOperation(config.timeout)
+      // new StepSeriesOperation(config, "loop"),
+      // new StepSeriesOperation(config, "loop"),
+      // new GetGrowthStacksOperation(config.timeout)
     );
   }
 
@@ -499,6 +500,8 @@ class DiagnoseLeaks extends CompositeOperation {
   }
 
   public skip(opSt: OperationState): boolean {
+    // FIXME: opSt.results.leaks.length appears to be 0
+    // try fixing this from FindLeaks
     return opSt.results.leaks.length === 0;
   }
 
@@ -572,7 +575,7 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
       buffer.push(size);
     }
     this.children.push(
-      new ConfigureRewriteOperation(false),
+      new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
         false,
@@ -771,7 +774,7 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      // new DiagnoseLeaks(config, true)
+      new DiagnoseLeaks(config, true)
     );
   }
   public get description() {

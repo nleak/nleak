@@ -1,7 +1,7 @@
 var argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 
 const Module = require('module');
-const fs = require('fs')
+const fs = require('fs');
 const originalRequire = Module.prototype.require;
 const exposeClosureState = require("./rewriting/closure_state_transform").exposeClosureState;
 
