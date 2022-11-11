@@ -55,7 +55,7 @@ const server = http.createServer((req, res) => {
 });
 server.listen(port, hostname, () => {});
 `
-const leak_test_wrapper = 
+const leak_test_wrapper =
 `
 var argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 const Module = require('module');
@@ -91,7 +91,6 @@ describe('Leak test', function () {
 
   function createStandardLeakTest(description: string, file_name: string, expected_leak: number): void {
     it("should be a leak", async function () {
-      console.log("aaaaaaa");
       const result = await NLeak.FindLeaks(`
       exports.url = "http://127.0.0.1:2333";
       // define entry point of sample-app
