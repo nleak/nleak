@@ -39,3 +39,5 @@ yarn.lock
 
 # ignore heap snapshot data
 *.heap
+
+test/example/sample_result/*

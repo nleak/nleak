@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon",
-    "test:driver": "npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../",
+    "test:driver": "npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/wrapper.js",
     "test:find-leaks": "rm -rf build && npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/guest_app.js",
     "test:leak": "env mocha -r ts-node/register 'test/leak_test.ts'",
     "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'",

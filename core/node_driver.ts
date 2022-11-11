@@ -17,13 +17,20 @@ interface ChildProcessResponse {
   _debugger: cdp.Client; // chrome debugger protocol client, ref: https://chromedevtools.github.io/devtools-protocol/1-2/
 }
 
-async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
+async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise<ChildProcessResponse> {
   return new Promise(async function (resolve, reject) {
     let _process: childProcess.ChildProcess;
     let _debugger: cdp.Client;
 
     try {
-      _process = childProcess.spawn("node", ["--inspect", absPath]);
+      var process_args = ["--inspect", absPath];
+      if (rewriteEnabled) {
+        process_args.push("--rewrite");
+      }
+      _process = childProcess.spawn("node", process_args, {
+        // https://nodejs.org/api/child_process.html#optionsstdio
+        stdio: ["pipe", "pipe", "pipe", "ipc"]
+      });
 
       // attach events
       _process.on("spawn", async () => {
@@ -59,6 +66,9 @@ async function runUserProcess(absPath: string): Promise<ChildProcessResponse> {
           `PID[${_process.pid}] child process exited with code ${code}`
         );
       });
+      process.on("exit", function() {
+        _process.kill();
+      });
     } catch (error) {
       console.error("failed to spawn another NodeJS child process");
       reject(error);
@@ -74,34 +84,39 @@ export default class NodeDriver implements IDriver {
   public static async Launch(
     log: Log,
     interceptPaths: string[] = [],
+    rewriteEnabled: boolean,
     quiet: boolean = true,
     guestAppEntryPath: string = "",
   ): Promise<NodeDriver> {
-    const { _process, _debugger } = await runUserProcess(guestAppEntryPath);
+    
 
-    const driver = new NodeDriver(log, interceptPaths, _process, _debugger);
+    const driver = new NodeDriver(log, guestAppEntryPath, interceptPaths, rewriteEnabled);
+    await driver._launchChildProcess();
 
     return driver;
   }
 
   private _log: Log;
+  private _guestAppEntryPath: string;
   private _interceptPaths: string[];
+  private _rewriteEnabled: boolean;
   private _quiet: boolean;
   private _process: childProcess.ChildProcess;
   private _debugger: cdp.Client;
   private _shutdown: boolean;
 
+
   private constructor(
     log: Log,
+    guestAppEntryPath: string,
     interceptPaths: string[],
-    _process: childProcess.ChildProcess,
-    _debugger: cdp.Client
+    rewriteEnabled: boolean
   ) {
     this._log = log;
+    this._guestAppEntryPath = guestAppEntryPath;
     this._interceptPaths = interceptPaths;
-    this._process = _process;
-    this._debugger = _debugger;
     this._shutdown = false;
+    this._rewriteEnabled = rewriteEnabled;
   }
 
   // dummy API
@@ -122,7 +137,9 @@ export default class NodeDriver implements IDriver {
     const driver = await NodeDriver.Launch(
       this._log,
       this._interceptPaths,
-      this._quiet
+      this._rewriteEnabled,
+      this._quiet,
+      this._guestAppEntryPath,
     );
     return driver;
   }
@@ -168,6 +185,21 @@ export default class NodeDriver implements IDriver {
     });
 
     return parser;
+  }
+
+  public async setRewrite(rewriteEnabled: boolean): Promise<void> {
+    if (rewriteEnabled == this._rewriteEnabled) {
+      return;
+    }
+    this._rewriteEnabled = rewriteEnabled;
+    this._process.kill("SIGINT");
+    await this._launchChildProcess();
+  }
+
+  private async _launchChildProcess() {
+    const { _process, _debugger } = await runUserProcess(this._guestAppEntryPath, this._rewriteEnabled);
+    this._process = _process;
+    this._debugger = _debugger;
   }
 
   public async debugLoop(): Promise<void> {

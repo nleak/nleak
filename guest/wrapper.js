@@ -1,5 +1,7 @@
+var argv = require('yargs/yargs')(process.argv.slice(2)).argv;
+
 const Module = require('module');
-const fs = require('fs')
+const fs = require('fs');
 const originalRequire = Module.prototype.require;
 const exposeClosureState = require("./rewriting/closure_state_transform").exposeClosureState;
 
@@ -9,6 +11,9 @@ require("./rewriting/nleak_agent.js");
 
 // Modify the require function to rewrite the guest app
 Module.prototype.require = function(){
+  if (!argv.rewrite) {
+    return originalRequire.apply(this, arguments);
+  }
   const fileName = arguments['0'];
   try {
     const filePath = require.resolve(fileName);
