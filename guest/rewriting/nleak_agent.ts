@@ -901,6 +901,7 @@ declare function importScripts(s: string): void;
 
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
+    console.log("\t\tstart $$$INSTRUMENT_PATHS$$$");
     for (const tree of trees) {
       if (isDOMRoot(tree)) {
         console.log("Will instrumenting DOMTree");

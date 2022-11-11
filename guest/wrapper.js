@@ -12,8 +12,10 @@ require("./rewriting/nleak_agent.js");
 // Modify the require function to rewrite the guest app
 Module.prototype.require = function(){
   if (!argv.rewrite) {
+    console.log('Not rewriting guest app');
     return originalRequire.apply(this, arguments);
   }
+  console.log('Will rewrite guest app');
   const fileName = arguments['0'];
   try {
     const filePath = require.resolve(fileName);

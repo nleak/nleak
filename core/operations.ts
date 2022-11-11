@@ -216,7 +216,7 @@ class ConfigureRewriteOperation extends Operation {
   }
 
   public get description(): string {
-    return `Configure the rewrite for the guest application.`;
+    return "Configure the rewrite for the guest application.\n";
   }
 
   public async _run(opSt: OperationState): Promise<void> {
@@ -300,7 +300,8 @@ class InstrumentGrowingPathsOperation extends Operation {
 
   public _run(opSt: OperationState): Promise<void> {
     console.log("[DEBUG] in InstrumentGrowingPathsOperation");
-    return opSt.nodeDriver.runCode<void>(`$$$INSTRUMENT_PATHS$$$(${JSON.stringify(toPathTree(opSt.results.leaks))})`);
+    // return opSt.nodeDriver.runCode<void>(`$$$INSTRUMENT_PATHS$$$(${JSON.stringify(toPathTree(opSt.results.leaks))})`);
+    return opSt.nodeDriver.runCode<void>(`$$$TEST_OUTPUT$$$()`);
   }
 }
 
@@ -431,8 +432,8 @@ class FindLeaks extends CompositeOperation {
   protected async _run(opSt: OperationState): Promise<void> {
     console.log("[DEBUG] FindLeaks _run");
     // await wait(20000);
-    // console.log("=============== wait ===============");
-    return opSt.progressBar.timeEvent(
+    console.log("----------------- FIND_LEAKS START -----------------");
+    await opSt.progressBar.timeEvent(
       OperationType.LEAK_IDENTIFICATION_AND_RANKING,
       async () => {
         await super._run(opSt);
@@ -445,6 +446,10 @@ class FindLeaks extends CompositeOperation {
         this._flushResults(opSt.results);
       }
     );
+    console.log("\t\tFIND_LEAKS results: ", opSt.results.leaks);
+    console.log("------------------ FIND_LEAKS END ------------------");
+
+    return Promise.resolve();
   }
 }
 
@@ -488,7 +493,7 @@ class DiagnoseLeaks extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, true),
       // new ProgramRunOperation(config, !isLoggedIn, 1, false),
       // FIXME: adding InstrumentGrowingPathsOperation will cause test:leak fail.
-      // new InstrumentGrowingPathsOperation(config.timeout)
+      new InstrumentGrowingPathsOperation(config.timeout)
       // new StepSeriesOperation(config, "loop"),
       // new StepSeriesOperation(config, "loop"),
       // new GetGrowthStacksOperation(config.timeout)
@@ -499,11 +504,11 @@ class DiagnoseLeaks extends CompositeOperation {
     return "Diagnosing leaks";
   }
 
-  public skip(opSt: OperationState): boolean {
-    // FIXME: opSt.results.leaks.length appears to be 0
-    // try fixing this from FindLeaks
-    return opSt.results.leaks.length === 0;
-  }
+  // public skip(opSt: OperationState): boolean {
+  //   // FIXME: opSt.results.leaks.length appears to be 0
+  //   // try fixing this from FindLeaks
+  //   return opSt.results.leaks.length === 0;
+  // }
 
   protected async _run(opSt: OperationState): Promise<void> {
     return opSt.progressBar.timeEvent(

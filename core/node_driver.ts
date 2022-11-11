@@ -88,7 +88,7 @@ export default class NodeDriver implements IDriver {
     quiet: boolean = true,
     guestAppEntryPath: string = "",
   ): Promise<NodeDriver> {
-    
+
 
     const driver = new NodeDriver(log, guestAppEntryPath, interceptPaths, rewriteEnabled);
     await driver._launchChildProcess();
