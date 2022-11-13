@@ -488,7 +488,7 @@ class DiagnoseLeaks extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, true),
       // new ProgramRunOperation(config, !isLoggedIn, 1, false),
       // FIXME: adding InstrumentGrowingPathsOperation will cause test:leak fail.
-      // new InstrumentGrowingPathsOperation(config.timeout)
+      new InstrumentGrowingPathsOperation(config.timeout)
       // new StepSeriesOperation(config, "loop"),
       // new StepSeriesOperation(config, "loop"),
       // new GetGrowthStacksOperation(config.timeout)
@@ -499,11 +499,11 @@ class DiagnoseLeaks extends CompositeOperation {
     return "Diagnosing leaks";
   }
 
-  public skip(opSt: OperationState): boolean {
-    // FIXME: opSt.results.leaks.length appears to be 0
-    // try fixing this from FindLeaks
-    return opSt.results.leaks.length === 0;
-  }
+  // public skip(opSt: OperationState): boolean {
+  //   // FIXME: opSt.results.leaks.length appears to be 0
+  //   // try fixing this from FindLeaks
+  //   return opSt.results.leaks.length === 0;
+  // }
 
   protected async _run(opSt: OperationState): Promise<void> {
     return opSt.progressBar.timeEvent(
