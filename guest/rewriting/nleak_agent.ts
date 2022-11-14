@@ -728,7 +728,7 @@ declare function importScripts(s: string): void;
     stackTrace: string = null
   ): void {
     let setProxy: AssignmentProxy;
-    console.log(`Instrumenting ${accessString} at ${rootAccessString}`);
+    console.log(`Instrumenting Path ${accessString} at ${rootAccessString}`);
 
     const prop = Object.getOwnPropertyDescriptor(root, tree.indexOrName);
     if (prop && prop.set && Array.isArray((<any>prop.set)["$$trees"])) {
@@ -905,7 +905,7 @@ declare function importScripts(s: string): void;
 
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
-    console.log("Will instrumenting tree", trees);
+    console.log("Will instrumenting trees", trees);
     for (const tree of trees) {
       if (isDOMRoot(tree)) {
         instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
@@ -924,6 +924,7 @@ declare function importScripts(s: string): void;
   ): void {
     const obj = root[path.indexOrName];
     if (isProxyable(obj)) {
+      console.log(`getStackTraces: ${path.indexOrName} is proxyable, proxystatus is ${getProxyStatus(obj)}, is growing ${path.isGrowing}`);
       if (path.isGrowing && getProxyStatus(obj) === ProxyStatus.IS_PROXY) {
         const map = getProxyStackTraces(obj);
         const stackTraces = stacksMap[path.id]
@@ -997,6 +998,7 @@ declare function importScripts(s: string): void;
 
   function $$$GET_STACK_TRACES$$$(): GrowingStackTraces {
     const stacksMap: { [id: number]: Set<string> } = {};
+    console.log("$$$GET_STACK_TRACES$$$, instrumentedTrees", instrumentedTrees);
     for (const tree of instrumentedTrees) {
       if (isDOMRoot(tree)) {
         getDOMStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);

@@ -265,9 +265,9 @@ class ParentCallStepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
     this.children.push(new ParentCallNextOperation(config, stepType, id));
-    // if (config.postNextSleep) {
-    //   this.children.push(new DelayOperation(config.postNextSleep));
-    // }
+    if (config.postCheckSleep) {
+      this.children.push(new DelayOperation(config.postCheckSleep));
+    }
   }
 
   public get description() {
@@ -441,7 +441,7 @@ class FindLeaks extends CompositeOperation {
         this._flushResults(opSt.results);
       }
     );
-    console.log("FIND_LEAKS results: ", opSt.results.leaks);
+    console.log("FIND_LEAKS results: ", JSON.stringify(opSt.results.leaks, null, 2));
     console.log("------------------ FIND_LEAKS END ------------------");
 
     return Promise.resolve();
