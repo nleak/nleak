@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
 });
 server.listen(port, hostname, () => {});
 `
-const no_leak_test_wrapper = 
+const no_leak_test_wrapper =
 `
 var argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 const Module = require('module');
@@ -105,7 +105,14 @@ describe('No Leak test', function() {
         exports.postCheckSleep = 100;
         `,new NopProgressBar(), driver, (results) => {}
         );
-        console.log(result.leaks.length);
+
+        fs.writeFile('./test.log', JSON.stringify(result, null, 2), err => {
+          if (err) {
+            console.error(err);
+          }
+          // file written successfully
+        });
+
         assertEqual(result.leaks.length == expected_leak, true);
         // console.log("result size : ", result.leaks.length)
         // result.leaks.forEach((leak) => {

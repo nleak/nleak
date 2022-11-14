@@ -108,6 +108,14 @@ describe('Leak test', function () {
       exports.postCheckSleep = 100;
       `, new NopProgressBar(), driver, (results) => { }
       );
+
+      fs.writeFile('./test.log', JSON.stringify(result, null, 2), err => {
+        if (err) {
+          console.error(err);
+        }
+        // file written successfully
+      });
+
       assertEqual(result.leaks.length >= expected_leak, true);
       // console.log("result size : ", result.leaks.length)
       // result.leaks.forEach((leak) => {
