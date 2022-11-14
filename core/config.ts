@@ -11,7 +11,7 @@ const DEFAULT_CONFIG: IBLeakConfig = {
 //   login: [], //for browser, not needed
   setup: [],
   loop: [], //array of steps
-//   postCheckSleep: 1000, //no need for now
+  postCheckSleep: 1000,
 //   postNextSleep: 0,
 //   postLoginSleep: 5000,
   timeout: 10 * 60 * 1000, // 10 minutes
@@ -73,7 +73,7 @@ export default class BLeakConfig implements IBLeakConfig {
     raw.setup.forEach((s, i) => checkStep("setup", i, s));
     checkNumber("timeout", raw.timeout);
     checkFunction("rewrite", raw.rewrite);
-    // checkNumber("postCheckSleep", raw.postCheckSleep);
+    checkNumber("postCheckSleep", raw.postCheckSleep);
     // checkNumber("postNextSleep", raw.postNextSleep);
     // checkNumber("postLoginSleep", raw.postLoginSleep);
     return new BLeakConfig(raw, configSource);
@@ -90,7 +90,7 @@ export default class BLeakConfig implements IBLeakConfig {
 //   public readonly login: Step[];
   public readonly setup: Step[];
   public readonly timeout: number;
-//   public readonly postCheckSleep: number;
+  public readonly postCheckSleep: number;
 //   public readonly postNextSleep: number;
 //   public readonly postLoginSleep: number;
   public readonly rewrite: (
@@ -116,7 +116,7 @@ export default class BLeakConfig implements IBLeakConfig {
     this.setup = raw.setup;
     this.timeout = raw.timeout;
     this.rewrite = raw.rewrite;
-    // this.postCheckSleep = raw.postCheckSleep;
+    this.postCheckSleep = raw.postCheckSleep;
     // this.postNextSleep = raw.postNextSleep;
     // this.postLoginSleep = raw.postLoginSleep;
   }

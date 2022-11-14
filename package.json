@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "nodemon",
     "test:driver": "npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/wrapper.js",
-    "test:find-leaks": "rm -rf build && npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/guest_app.js",
+    "test:find-leaks": "rm -rf build && npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/test_apps/app_1.js",
+    "test:diagnosis-leaks": "rm -rf build && npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/wrapper.js",
     "test:leak": "env mocha -r ts-node/register 'test/leak_test.ts'",
     "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'",
     "test:unit": "env mocha -r ts-node/register 'test/*.ts' > unit_test.log",
     "test:rewrite": "rm -rf build && npx tsc && node build/guest/wrapper.js",
-    "test": "npm run test:leak &&  npm run test:no-leak"
+    "test": "npm run test:leak && npm run test:no-leak"
   },
   "repository": {
     "type": "git",

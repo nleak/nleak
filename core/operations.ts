@@ -216,7 +216,7 @@ class ConfigureRewriteOperation extends Operation {
   }
 
   public get description(): string {
-    return `Configure the rewrite for the guest application.`;
+    return "Configure the rewrite for the guest application.\n";
   }
 
   public async _run(opSt: OperationState): Promise<void> {
@@ -265,9 +265,9 @@ class ParentCallStepOperation extends CompositeOperation {
   constructor(config: BLeakConfig, stepType: StepType, id: number) {
     super();
     this.children.push(new ParentCallNextOperation(config, stepType, id));
-    // if (config.postNextSleep) {
-    //   this.children.push(new DelayOperation(config.postNextSleep));
-    // }
+    if (config.postCheckSleep) {
+      this.children.push(new DelayOperation(config.postCheckSleep));
+    }
   }
 
   public get description() {
@@ -336,7 +336,6 @@ class StepSeriesOperation extends CompositeOperation {
 class ProgramRunOperation extends CompositeOperation {
   constructor(
     config: BLeakConfig,
-    runLogin: boolean,
     iterations: number,
     takeInitialSnapshot: boolean,
     snapshotCb?: SnapshotCb
@@ -352,7 +351,6 @@ class ProgramRunOperation extends CompositeOperation {
     //     new NavigateOperation(config.timeout, config.url)
     //   );
     // }
-
     // if (config.setup.length > 0) {
     //   this.children.push(new StepSeriesOperation(config, "setup"));
     // }
@@ -375,9 +373,9 @@ class ProgramRunOperation extends CompositeOperation {
         // Make sure we're at step 0 before taking the snapshot.
         // new CheckOperation(config.timeout, "loop", 0)
       );
-    //   if (config.postCheckSleep) {
-    //     this.children.push(new DelayOperation(config.postCheckSleep));
-    //   }
+      if (config.postCheckSleep) {
+        this.children.push(new DelayOperation(config.postCheckSleep));
+      }
       if (snapshotCb) {
         this.children.push(
           new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
@@ -406,7 +404,6 @@ class FindLeaks extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
-        true,
         config.iterations,
         false,
         async (sn: HeapSnapshotParser, log: Log) => {
@@ -429,10 +426,9 @@ class FindLeaks extends CompositeOperation {
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
-    console.log("[DEBUG] FindLeaks _run");
     // await wait(20000);
-    // console.log("=============== wait ===============");
-    return opSt.progressBar.timeEvent(
+    console.log("\n\n----------------- FIND_LEAKS START -----------------");
+    await opSt.progressBar.timeEvent(
       OperationType.LEAK_IDENTIFICATION_AND_RANKING,
       async () => {
         await super._run(opSt);
@@ -445,6 +441,10 @@ class FindLeaks extends CompositeOperation {
         this._flushResults(opSt.results);
       }
     );
+    console.log("FIND_LEAKS results: ", JSON.stringify(opSt.results.leaks, null, 2));
+    console.log("------------------ FIND_LEAKS END ------------------");
+
+    return Promise.resolve();
   }
 }
 
@@ -461,11 +461,12 @@ class GetGrowthStacksOperation extends Operation {
     return opSt.progressBar.timeEvent(
       OperationType.GET_GROWTH_STACKS,
       async () => {
-        // const traces = await opSt.nodeDriver.runCode<GrowingStackTraces>(
-        //   `window.$$$GET_STACK_TRACES$$$()`
-        // );
+        const traces = await opSt.nodeDriver.runCode<GrowingStackTraces>(
+          `$$$GET_STACK_TRACES$$$()`
+        );
+        console.log("[DEBUG] traces: ", traces);
         // TODO: port growthStacks to NodeJS
-        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+        // const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
           // const stacks = growthStacks[index] || [];
@@ -479,19 +480,15 @@ class GetGrowthStacksOperation extends Operation {
 }
 
 class DiagnoseLeaks extends CompositeOperation {
-  constructor(config: BLeakConfig, isLoggedIn: boolean) {
+  constructor(config: BLeakConfig) {
     super();
-    console.log("[DEBUG] in DiagnoseLeaks");
-    // FIXME: current included operations are only for testing
-    // include all operations when they're finished
     this.children.push(
       new ConfigureRewriteOperation(config.timeout, true),
-      // new ProgramRunOperation(config, !isLoggedIn, 1, false),
-      // FIXME: adding InstrumentGrowingPathsOperation will cause test:leak fail.
-      // new InstrumentGrowingPathsOperation(config.timeout)
-      // new StepSeriesOperation(config, "loop"),
-      // new StepSeriesOperation(config, "loop"),
-      // new GetGrowthStacksOperation(config.timeout)
+      new ProgramRunOperation(config, 1, false),
+      new InstrumentGrowingPathsOperation(config.timeout),
+      new ParentCallStepSeriesOperation(config, "loop"),
+      new ParentCallStepSeriesOperation(config, "loop"),
+      new GetGrowthStacksOperation(config.timeout)
     );
   }
 
@@ -500,19 +497,25 @@ class DiagnoseLeaks extends CompositeOperation {
   }
 
   public skip(opSt: OperationState): boolean {
-    // FIXME: opSt.results.leaks.length appears to be 0
-    // try fixing this from FindLeaks
-    return opSt.results.leaks.length === 0;
+    if (!opSt.results || opSt.results.leaks.length === 0) {
+      console.log("NO LEAKS FOUND: DIAGNOSIS_LEAKS SKIPPED -----------------");
+      return true;
+    }
+    return false;
   }
 
   protected async _run(opSt: OperationState): Promise<void> {
-    return opSt.progressBar.timeEvent(
+    console.log("\n\n----------------- DIAGNOSIS_LEAKS START -----------------");
+    console.log("opSt.results.leaks: ", opSt.results.leaks);
+    await opSt.progressBar.timeEvent(
       OperationType.LEAK_DIAGNOSES,
       async () => {
         await super._run(opSt);
         opSt.results = opSt.results.compact();
       }
     );
+    console.log("----------------- DIAGNOSIS_LEAKS END -----------------");
+    return Promise.resolve();
   }
 }
 
@@ -578,7 +581,6 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
-        false,
         config.rankingEvaluationIterations,
         true,
         (sn, log) => {
@@ -774,7 +776,7 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      new DiagnoseLeaks(config, true)
+      new DiagnoseLeaks(config)
     );
   }
   public get description() {
