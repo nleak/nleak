@@ -336,7 +336,6 @@ class StepSeriesOperation extends CompositeOperation {
 class ProgramRunOperation extends CompositeOperation {
   constructor(
     config: BLeakConfig,
-    runLogin: boolean,
     iterations: number,
     takeInitialSnapshot: boolean,
     snapshotCb?: SnapshotCb
@@ -352,7 +351,6 @@ class ProgramRunOperation extends CompositeOperation {
     //     new NavigateOperation(config.timeout, config.url)
     //   );
     // }
-
     // if (config.setup.length > 0) {
     //   this.children.push(new StepSeriesOperation(config, "setup"));
     // }
@@ -375,9 +373,9 @@ class ProgramRunOperation extends CompositeOperation {
         // Make sure we're at step 0 before taking the snapshot.
         // new CheckOperation(config.timeout, "loop", 0)
       );
-    //   if (config.postCheckSleep) {
-    //     this.children.push(new DelayOperation(config.postCheckSleep));
-    //   }
+      if (config.postCheckSleep) {
+        this.children.push(new DelayOperation(config.postCheckSleep));
+      }
       if (snapshotCb) {
         this.children.push(
           new TakeHeapSnapshotOperation(config.timeout, snapshotCb)
@@ -406,7 +404,6 @@ class FindLeaks extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
-        true,
         config.iterations,
         false,
         async (sn: HeapSnapshotParser, log: Log) => {
@@ -485,16 +482,12 @@ class GetGrowthStacksOperation extends Operation {
 class DiagnoseLeaks extends CompositeOperation {
   constructor(config: BLeakConfig, isLoggedIn: boolean) {
     super();
-    console.log("[DEBUG] in DiagnoseLeaks");
-    // FIXME: current included operations are only for testing
-    // include all operations when they're finished
     this.children.push(
       new ConfigureRewriteOperation(config.timeout, true),
-      // new ProgramRunOperation(config, !isLoggedIn, 1, false),
-      // FIXME: adding InstrumentGrowingPathsOperation will cause test:leak fail.
+      new ProgramRunOperation(config, 1, false),
       new InstrumentGrowingPathsOperation(config.timeout),
-      new StepSeriesOperation(config, "loop"),
-      // new StepSeriesOperation(config, "loop"),
+      new ParentCallStepSeriesOperation(config, "loop"),
+      new ParentCallStepSeriesOperation(config, "loop"),
       new GetGrowthStacksOperation(config.timeout)
     );
   }
@@ -588,7 +581,6 @@ class EvaluateRankingMetricProgramRunOperation extends CompositeOperation {
       new ConfigureRewriteOperation(config.timeout, false),
       new ProgramRunOperation(
         config,
-        false,
         config.rankingEvaluationIterations,
         true,
         (sn, log) => {

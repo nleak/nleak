@@ -50,7 +50,7 @@ export interface IBLeakConfig {
 
   // How long (in milliseconds) to wait between a check() returning 'true' and transitioning to the next step or taking a heap snapshot.
   // Default: 1000
-//   postCheckSleep: number;
+  postCheckSleep: number;
 //   // How long (in milliseconds) to wait between transitioning to the next step and running check() for the first time.
 //   // Default: 0
 //   postNextSleep: number;
