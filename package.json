@@ -12,7 +12,7 @@
     "test:no-leak": "env mocha -r ts-node/register 'test/no_leak_test.ts'",
     "test:unit": "env mocha -r ts-node/register 'test/*.ts' > unit_test.log",
     "test:rewrite": "rm -rf build && npx tsc && node build/guest/wrapper.js",
-    "test": "npm run test:leak &&  npm run test:no-leak"
+    "test": "npm run test:leak && npm run test:no-leak"
   },
   "repository": {
     "type": "git",
