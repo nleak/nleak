@@ -466,7 +466,7 @@ class GetGrowthStacksOperation extends Operation {
         );
         console.log("[DEBUG] traces: ", traces);
         // TODO: port growthStacks to NodeJS
-        //   const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+        // const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
           // const stacks = growthStacks[index] || [];
@@ -480,7 +480,7 @@ class GetGrowthStacksOperation extends Operation {
 }
 
 class DiagnoseLeaks extends CompositeOperation {
-  constructor(config: BLeakConfig, isLoggedIn: boolean) {
+  constructor(config: BLeakConfig) {
     super();
     this.children.push(
       new ConfigureRewriteOperation(config.timeout, true),
@@ -776,7 +776,7 @@ export class FindAndDiagnoseLeaks extends CompositeOperation {
     super();
     this.children.push(
       new FindLeaks(config, snapshotCb, flushResults),
-      new DiagnoseLeaks(config, true)
+      new DiagnoseLeaks(config)
     );
   }
   public get description() {
