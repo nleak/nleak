@@ -36,7 +36,7 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
       _process.on("spawn", async () => {
         // spawn successfully
         console.log(
-          `PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`
+          `Child_PID[${_process.pid}] spawned, will create connect websocket using chrome-remote-interface`
         );
 
         await new Promise(r => setTimeout(r, 2000));
@@ -51,19 +51,19 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         console.log("PARENT got message:", msg);
       });
       _process.stdout.on("data", (data) => {
-        console.log(`PID[${_process.pid}] stdout: ${data}`);
+        console.log(`Child_PID[${_process.pid}] stdout: ${data}`);
       });
       _process.on("error", (err) => {
-        console.log(`PID[${_process.pid}] error: ${err}`);
+        console.log(`Child_PID[${_process.pid}] error: ${err}`);
       });
       _process.on("close", (code) => {
         console.log(
-          `PID[${_process.pid}] child process close all stdio with code ${code}`
+          `Child_PID[${_process.pid}] child process close all stdio with code ${code}`
         );
       });
       _process.on("exit", (code) => {
         console.log(
-          `PID[${_process.pid}] child process exited with code ${code}`
+          `Child_PID[${_process.pid}] child process exited with code ${code}`
         );
       });
       process.on("exit", function() {

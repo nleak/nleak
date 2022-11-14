@@ -15,7 +15,6 @@ Module.prototype.require = function(){
     console.log('Not rewriting guest app');
     return originalRequire.apply(this, arguments);
   }
-  console.log('Will rewrite guest app');
   const fileName = arguments['0'];
   try {
     const filePath = require.resolve(fileName);
@@ -43,6 +42,7 @@ Module.prototype.require = function(){
 };
 
 // test instrumental function works on guest app
-$$$TEST_OUTPUT$$$();
-// run the guest app after rewriting.
+$$$AGENT_PRINT$$$("agent $$$ function ready for code instrumentation");
+
+// rewrite and run the guest app.
 require('./guest_app.js');

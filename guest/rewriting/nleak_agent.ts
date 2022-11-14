@@ -95,7 +95,7 @@ declare function importScripts(s: string): void;
     return;
   }
 
-  ROOT.$$$TEST_OUTPUT$$$ = $$$TEST_OUTPUT$$$;
+  ROOT.$$$AGENT_PRINT$$$ = $$$AGENT_PRINT$$$;
   ROOT.$$$INSTRUMENT_PATHS$$$ = $$$INSTRUMENT_PATHS$$$;
   ROOT.$$$GET_STACK_TRACES$$$ = $$$GET_STACK_TRACES$$$;
   ROOT.$$$CREATE_SCOPE_OBJECT$$$ = $$$CREATE_SCOPE_OBJECT$$$;
@@ -144,8 +144,8 @@ declare function importScripts(s: string): void;
   // Some websites overwrite Object.create.
   const objectCreate = Object.create;
 
-  function $$$TEST_OUTPUT$$$(){
-    console.log('\n\n=============== $$$TEST_OUTPUT$$$ ===============\n\n');
+  function $$$AGENT_PRINT$$$(s: string) {
+    console.log('\n=============== $$$AGENT_PRINT$$$ ===============\n' + s + '\n');
   }
 
   /**
@@ -728,13 +728,14 @@ declare function importScripts(s: string): void;
     stackTrace: string = null
   ): void {
     let setProxy: AssignmentProxy;
-    //logToConsole(`Instrumenting ${accessString} at ${rootAccessString}`);
+    console.log(`Instrumenting ${accessString} at ${rootAccessString}`);
+
     const prop = Object.getOwnPropertyDescriptor(root, tree.indexOrName);
     if (prop && prop.set && Array.isArray((<any>prop.set)["$$trees"])) {
-      //logToConsole(`It's already instrumented!`);
+      console.log(`It's already instrumented!`);
       setProxy = <any>prop.set;
     } else {
-      //logToConsole(`New instrumentation.`);
+      console.log(`New instrumentation.`);
       // let hiddenValue = root[tree.indexOrName];
       const isGrowing = tree.isGrowing;
       const indexOrName = tree.indexOrName;
@@ -759,7 +760,7 @@ declare function importScripts(s: string): void;
           isGrowing ? getProxy(accessString, v, trace) : v
         );
         setProxy.$$update(trace);
-        // logToConsole(`${rootAccessString}: Assignment`);
+        console.log(`${rootAccessString}: Assignment (setProxy)`);
         return true;
       };
       setProxy.$$rootAccessString = rootAccessString;
@@ -775,8 +776,9 @@ declare function importScripts(s: string): void;
           set: setProxy,
           configurable: true
         });
+        console.log(`Instrumented ${accessString} at ${rootAccessString}`);
       } catch (e) {
-        logToConsole(`Unable to instrument ${rootAccessString}: ${e}`);
+        console.log(`Unable to instrument ${rootAccessString}: ${e}`);
       }
     }
 
@@ -872,13 +874,15 @@ declare function importScripts(s: string): void;
   ): void {
     const accessString =
       rootAccessString + `[${safeString(`${tree.indexOrName}`)}]`;
-    //logToConsole(`access string: ${accessString}`);
+    console.log(`instrumentTree, access string: ${accessString}`);
+
     // Ignore roots that are not proxyable.
     if (!isProxyable(root)) {
-      //logToConsole(`Not a proxyable root.`);
+      console.log(`Not a proxyable root.`);
       return;
     }
     const obj = root[tree.indexOrName];
+    console.log('obj: ', obj);
     instrumentPath(rootAccessString, accessString, root, tree, stackTrace);
 
     // Capture writes of children.
@@ -901,17 +905,16 @@ declare function importScripts(s: string): void;
 
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
-    console.log("\t\tstart $$$INSTRUMENT_PATHS$$$");
+    console.log("Will instrumenting tree", trees);
     for (const tree of trees) {
       if (isDOMRoot(tree)) {
-        console.log("Will instrumenting DOMTree");
         instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
       } else {
-        console.log("Will instrumenting tree");
         instrumentTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
       }
     }
     instrumentedTrees = instrumentedTrees.concat(trees);
+    console.log("$$$INSTRUMENT_PATHS$$$ DONE. Instrumented trees", instrumentedTrees);
   }
 
   function getStackTraces(
@@ -1001,6 +1004,7 @@ declare function importScripts(s: string): void;
         getStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
       }
     }
+
     const jsonableStacksMap: GrowingStackTraces = {};
     for (const stringId in stacksMap) {
       if (stacksMap.hasOwnProperty(stringId)) {
