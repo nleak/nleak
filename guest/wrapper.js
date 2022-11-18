@@ -45,4 +45,4 @@ Module.prototype.require = function(){
 $$$AGENT_PRINT$$$("agent $$$ function ready for code instrumentation");
 
 // rewrite and run the guest app.
-require('./test_apps/app_2.js');
+require('./test_apps/app_1.js');

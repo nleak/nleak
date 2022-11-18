@@ -5,21 +5,24 @@ const port = 2333;
 
 //add callable methods by other script aka wrapper.js
 
-var obj = {};
-var power = 2;
+global.LEAKOBJ = {};
+global.LEAKOBJ2 = LEAKOBJ;
+var power = 8;
 function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
-      obj[Math.random()] = Math.random();
+      if (global.LEAKOBJ === global.LEAKOBJ2) {
+        var target = Math.random() > 0.5 ? global.LEAKOBJ : global.LEAKOBJ2;
+        target[Math.random()] = Math.random();
+      }
     }
-    console.log("memory leaking...");
 }
 
-const server = http.createServer((req, res) => {
+// arrow function binding
+function serve(req, res) {
   if (req.url === "/leak" && req.method === "GET") {
     leaking();
-
     res.writeHead(200, { "Content-Type": "application/json" });
     res.write("leaking() done");
     res.end();
@@ -31,7 +34,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ message: "Route not found" }));
   }
-});
+}
+const server = http.createServer(serve);
 
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/, with API /leak`);
