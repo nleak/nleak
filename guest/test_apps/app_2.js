@@ -3,24 +3,23 @@ const http = require('http');
 const hostname = '127.0.0.1';
 const port = 2333;
 
-//add callable methods by other script aka wrapper.js
-// var theThing = null;
-// var leaking = function () {
-//   var originalThing = theThing;
-//   var unused = function () {
-//     if (originalThing) console.log("hi");
-//   };
-//   theThing = {
-//     longStr: new Array(100000).join("*"),
-//     someMethod: function () {
-//       console.log(someMessage);
-//     },
-//   };
-// };
+global.LEAKOBJ = {};
+global.LEAKOBJ2 = LEAKOBJ;
+var power = 5;
+function leaking() {
+    var top = Math.pow(2, power);
+    power++;
+    for (var j = 0; j < top; j++) {
+      if (global.LEAKOBJ === global.LEAKOBJ2) {
+        var target = Math.random() > 0.5 ? global.LEAKOBJ : global.LEAKOBJ2;
+        target[Math.random()] = Math.random();
+      }
+    }
+}
 
 const server = http.createServer((req, res) => {
   if (req.url === "/leak" && req.method === "GET") {
-    // leaking();
+    leaking();
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.write("leaking() done from app 2");
