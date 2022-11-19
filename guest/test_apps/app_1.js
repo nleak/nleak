@@ -5,13 +5,13 @@ const port = 2333;
 
 //add callable methods by other script aka wrapper.js
 
-global.obj = {};
+global.LEAKOBJ = {};
 var power = 2;
 function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
-      obj[Math.random()] = Math.random();
+      LEAKOBJ[Math.random()] = Math.random();
     }
     console.log("memory leaking...");
 }

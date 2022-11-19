@@ -713,6 +713,7 @@ declare function importScripts(s: string): void;
         writable: true
       });
     }
+    console.log(`[Agent DEBUG setHiddenValue] hidden property name: ${propName}, value: ${thisObj[propName]}`);
     thisObj[propName] = value;
   }
 
@@ -728,14 +729,14 @@ declare function importScripts(s: string): void;
     stackTrace: string = null
   ): void {
     let setProxy: AssignmentProxy;
-    console.log(`Instrumenting Path ${accessString} at ${rootAccessString}`);
+    console.log(`[Agent DEBUG instrumentPath] ${accessString} at ${rootAccessString}, root: ${root}, stackTrace: ${stackTrace}`);
 
     const prop = Object.getOwnPropertyDescriptor(root, tree.indexOrName);
     if (prop && prop.set && Array.isArray((<any>prop.set)["$$trees"])) {
       console.log(`It's already instrumented!`);
       setProxy = <any>prop.set;
     } else {
-      console.log(`New instrumentation.`);
+      console.log(`[Agent DEBUG instrumentPath] New instrumentation.`);
       // let hiddenValue = root[tree.indexOrName];
       const isGrowing = tree.isGrowing;
       const indexOrName = tree.indexOrName;
@@ -743,6 +744,7 @@ declare function importScripts(s: string): void;
       if (isGrowing) {
         //logToConsole(`Converting the hidden value into a proxy.`)
         const proxy = getProxy(accessString, getHiddenValue(root, indexOrName));
+        console.log(`[Agent DEBUG instrumentPath] proxy ${proxy}`);
         setHiddenValue(root, indexOrName, proxy);
         if (
           stackTrace !== null &&
@@ -760,7 +762,7 @@ declare function importScripts(s: string): void;
           isGrowing ? getProxy(accessString, v, trace) : v
         );
         setProxy.$$update(trace);
-        console.log(`${rootAccessString}: Assignment (setProxy)`);
+        console.log(`[PROXY_instrumentPath] set trace: ${trace}`);
         return true;
       };
       setProxy.$$rootAccessString = rootAccessString;
@@ -776,7 +778,7 @@ declare function importScripts(s: string): void;
           set: setProxy,
           configurable: true
         });
-        console.log(`Instrumented ${accessString} at ${rootAccessString}`);
+        console.log(`[Agent DEBUG instrumentPath] should updated set ${root[indexOrName].set}`);
       } catch (e) {
         console.log(`Unable to instrument ${rootAccessString}: ${e}`);
       }
@@ -874,7 +876,7 @@ declare function importScripts(s: string): void;
   ): void {
     const accessString =
       rootAccessString + `[${safeString(`${tree.indexOrName}`)}]`;
-    console.log(`instrumentTree, access string: ${accessString}`);
+    console.log(`[Agent DEBUG instrumentTree] access string: ${accessString}`);
 
     // Ignore roots that are not proxyable.
     if (!isProxyable(root)) {
@@ -882,7 +884,7 @@ declare function importScripts(s: string): void;
       return;
     }
     const obj = root[tree.indexOrName];
-    console.log('obj: ', obj);
+    console.log('[Agent DEBUG instrumentTree] object: ', obj);
     instrumentPath(rootAccessString, accessString, root, tree, stackTrace);
 
     // Capture writes of children.
@@ -905,7 +907,7 @@ declare function importScripts(s: string): void;
 
   let instrumentedTrees: IPathTrees = [];
   function $$$INSTRUMENT_PATHS$$$(trees: IPathTrees): void {
-    console.log("Will instrumenting trees", trees);
+    console.log("[Agent DEBUG $$$INSTRUMENT_PATHS$$$] Will instrumenting trees", trees);
     for (const tree of trees) {
       if (isDOMRoot(tree)) {
         instrumentDOMTree("$$$GLOBAL$$$", ROOT.$$$GLOBAL$$$, tree);
@@ -914,7 +916,7 @@ declare function importScripts(s: string): void;
       }
     }
     instrumentedTrees = instrumentedTrees.concat(trees);
-    console.log("$$$INSTRUMENT_PATHS$$$ DONE. Instrumented trees", instrumentedTrees);
+    console.log("[Agent DEBUG $$$INSTRUMENT_PATHS$$$] DONE. Instrumented trees", JSON.stringify(instrumentedTrees, null, 2));
   }
 
   function getStackTraces(

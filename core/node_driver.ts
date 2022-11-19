@@ -51,10 +51,10 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         console.log("PARENT got message:", msg);
       });
       _process.stdout.on("data", (data) => {
-        console.log(`Child_PID[${_process.pid}] stdout: ${data}`);
+        console.log(`Child_PID[${_process.pid}]: ${data}`);
       });
       _process.on("error", (err) => {
-        console.log(`Child_PID[${_process.pid}] error: ${err}`);
+        console.log(`Child_PID[${_process.pid}] ERR: ${err}`);
       });
       _process.on("close", (code) => {
         console.log(
@@ -70,7 +70,7 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         _process.kill();
       });
     } catch (error) {
-      console.error("failed to spawn another NodeJS child process");
+      console.error("!!!FAILED to spawn guest NodeJS process", error);
       reject(error);
     }
   });
