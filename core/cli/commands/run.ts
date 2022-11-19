@@ -64,7 +64,7 @@ const Run: CommandModule = {
         shutDown();
       });
 
-      const bleakResultsOutput = join(args.out, "bleak_results.json");
+      const bleakResultsOutput = join(args.out, "nleak_results.json");
       let bleakResults: BLeakResults | null;
       if (existsSync(bleakResultsOutput)) {
         console.log(`Resuming using data from ${bleakResultsOutput}`);
@@ -95,7 +95,7 @@ const Run: CommandModule = {
         (results) => {
           writeFileSync(bleakResultsOutput, JSON.stringify(results));
           const resultsLog = TextReporter(results);
-          writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
+          writeFileSync(join(args.out, "nleak_report.log"), resultsLog);
         },
         (sn) => {
           if (args.snapshot) {
@@ -124,7 +124,7 @@ const Run: CommandModule = {
         .then((results) => {
           writeFileSync(bleakResultsOutput, JSON.stringify(results));
           const resultsLog = TextReporter(results);
-          writeFileSync(join(args.out, "bleak_report.log"), resultsLog);
+          writeFileSync(join(args.out, "nleak_report.log"), resultsLog);
           if (args["produce-time-log"]) {
             writeFileSync(
               join(args.out, "time_log.json"),

@@ -159,14 +159,20 @@ export default class NodeDriver implements IDriver {
   public async runCode<T>(expression: string): Promise<T> {
     // following is the implementation of runCode in the child process
     console.log( "[DEBUG node_driver] runCode: ", expression);
-    const e = await this._debugger.Runtime.evaluate({ expression, returnByValue: true });
-    this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
-    if (e.exceptionDetails) {
-      console.log("exceptionDetails: ", e.exceptionDetails);
-      return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
+    let res;
+    try {
+      res = await this._debugger.Runtime.evaluate({ expression, returnByValue: true });
+    } catch (error) {
+      console.error(">>> failed to evaluate expression in child process", error);
+      throw error;
     }
-    console.log("e.result.value: ", e.result.value);
-    return e.result.value;
+    console.log(`${expression} => ${JSON.stringify(res.result.value)}`);
+    if (res.exceptionDetails) {
+      console.log("exceptionDetails: ", res.exceptionDetails);
+      return Promise.reject(exceptionDetailsToString(res.exceptionDetails));
+    }
+    console.log("e.result.value: ", res.result.value);
+    return res.result.value;
   }
 
   public async takeHeapSnapshot(): Promise<HeapSnapshotParser> {
