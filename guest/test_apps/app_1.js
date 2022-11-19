@@ -5,7 +5,7 @@ const port = 2333;
 
 //add callable methods by other script aka wrapper.js
 
-var obj = {};
+global.obj = {};
 var power = 2;
 function leaking() {
     var top = Math.pow(2, power);
