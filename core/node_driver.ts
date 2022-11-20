@@ -51,10 +51,10 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         console.log("PARENT got message:", msg);
       });
       _process.stdout.on("data", (data) => {
-        console.log(`Child_PID[${_process.pid}] stdout: ${data}`);
+        console.log(`Child_PID[${_process.pid}]: ${data}`);
       });
       _process.on("error", (err) => {
-        console.log(`Child_PID[${_process.pid}] error: ${err}`);
+        console.log(`Child_PID[${_process.pid}] ERR: ${err}`);
       });
       _process.on("close", (code) => {
         console.log(
@@ -70,7 +70,7 @@ async function runUserProcess(absPath: string, rewriteEnabled: boolean): Promise
         _process.kill();
       });
     } catch (error) {
-      console.error("failed to spawn another NodeJS child process");
+      console.error("!!!FAILED to spawn guest NodeJS process", error);
       reject(error);
     }
   });
@@ -160,7 +160,7 @@ export default class NodeDriver implements IDriver {
     // following is the implementation of runCode in the child process
     console.log( "[DEBUG node_driver] runCode: ", expression);
     const e = await this._debugger.Runtime.evaluate({ expression, returnByValue: true });
-    this._log.debug(`${expression} => ${JSON.stringify(e.result.value)}`);
+    console.log(`[DEBUG node_driver] ${expression} => ${JSON.stringify(e)}`);
     if (e.exceptionDetails) {
       console.log("exceptionDetails: ", e.exceptionDetails);
       return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
