@@ -45,4 +45,7 @@ Module.prototype.require = function(){
 $$$AGENT_PRINT$$$("agent $$$ function ready for code instrumentation");
 
 // rewrite and run the guest app.
-require('./test_apps/app_1.js');
+// global.__nleak__ = require('./test_apps/app_3.js');
+global.__nleak__ = function() { require('./test_apps/app_3.js'); }()
+
+// global.__nleak__()

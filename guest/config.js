@@ -12,13 +12,13 @@ exports.loop = [
     next: () => {},
   },
   {
-    name: "1st Call /leak API",
+    name: "2nd Call /leak API",
     endpoint: "http://127.0.0.1:2333/leak",
     check: () => {},
     next: () => {},
   },
   {
-    name: "1st Call /leak API",
+    name: "3rd Call /leak API",
     endpoint: "http://127.0.0.1:2333/leak",
     check: () => {},
     next: () => {},
