@@ -467,10 +467,10 @@ class GetGrowthStacksOperation extends Operation {
         const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
-          // const stacks = growthStacks[index] || [];
-          // stacks.forEach((s) => {
-          //   lr.addStackTrace(s);
-          // });
+          const stacks = growthStacks[index] || [];
+          stacks.forEach((s) => {
+            lr.addStackTrace(s);
+          });
         });
       }
     );

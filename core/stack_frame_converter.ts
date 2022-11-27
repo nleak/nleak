@@ -1,11 +1,12 @@
 import { SourceMapConsumer, RawSourceMap } from "source-map";
-// import { StackFrame, parse as ErrorStackParser } from "error-stack-parser";
-import { resolve as resolveURL } from "url";
 import BLeakResults from "./results";
 import { IStack } from "./common/interfaces";
 import ErrorStackParser from "error-stack-parser";
+import fs from "node:fs";
 
+const rewrittenFilePath = "/tmp/nleak_rewritten.js";
 const magicString = "//# sourceMappingURL=data:application/json;base64,";
+const HACKING_URL_HOST = "http://nleak.js.org/"; // TODO: remove URL in nleak-viewer and use file path instead, then remove this
 
 /**
  * Converts stack frames to get the position in the original source document.
@@ -32,25 +33,24 @@ export default class StackFrameConverter {
     traces: GrowingStackTraces,
   ): { [id: number]: IStack[] } {
     console.log(`Converting stacks... pageUrl=${pageUrl}`);
-    return new StackFrameConverter(results).convertGrowthStacks(
-      // {}, // TODO: to be removed
-      // pageUrl,
-      traces,
-      // "foo" // TODO: to be removed
-    );
+    return new StackFrameConverter(results).convertGrowthStacks(traces);
   }
 
   constructor(private _results: BLeakResults) {}
 
-  private _fetchMap(proxy: any, url: string): void {
+  private _getSourceMap(url: string): void {
     if (typeof url !== "string") {
+      console.log("ERR: _getSourceMap input filename is not a string");
       return;
     }
     let map = this._maps.get(url);
     if (!map) {
       try {
-        const stashedItem = proxy.getFromStash(url);
-        const source = stashedItem.data.toString();
+        // NOTE from NLeak dev:
+        // currently only support the single rewritten file source map
+        // if there is a need to support multiple source maps, we need to change the logic here
+        // to read multiple source maps files from the file system
+        const source = fs.readFileSync(rewrittenFilePath).toString();
         let sourceMapOffset = source.lastIndexOf(magicString);
         if (sourceMapOffset > -1) {
           sourceMapOffset += magicString.length;
@@ -67,7 +67,7 @@ export default class StackFrameConverter {
             for (let i = 0; i < len; i++) {
               this._results.addSourceFile(
                 url,
-                stashedItem.isJavaScript ? "text/javascript" : "text/html",
+                "text/javascript", // TODO: could be other content types
                 sourceMap.sourcesContent[i]
               );
             }
@@ -75,7 +75,7 @@ export default class StackFrameConverter {
         } else {
           this._results.addSourceFile(
             url,
-            stashedItem.isJavaScript ? "text/javascript" : "text/html",
+            "text/javascript", // TODO: could be other content types
             source
           );
         }
@@ -87,12 +87,7 @@ export default class StackFrameConverter {
     }
   }
 
-  public convertGrowthStacks(
-    // proxy: any,
-    // pageUrl: string,
-    traces: GrowingStackTraces,
-    // agentUrl: string
-  ): { [id: number]: IStack[] } {
+  public convertGrowthStacks(traces: GrowingStackTraces): { [id: number]: IStack[] } {
     // First pass: Get all unique URLs and their source maps.
     const urls = new Set<string>();
     const rawStacks = new Map<string, StackFrame[]>();
@@ -112,10 +107,9 @@ export default class StackFrameConverter {
     }
 
     function processFrame(f: StackFrame) {
-      // NOTE: NLeak doesn't have http or https in the url
-      // if (f.fileName && !f.fileName.toLowerCase().startsWith("http")) {
-      //   f.fileName = resolveURL(pageUrl, f.fileName);
-      // }
+      if (f.fileName && !f.fileName.toLowerCase().startsWith("http")) { // TODO: remove enforce URL after nleak-viewer is updated
+        f.fileName = HACKING_URL_HOST + f.fileName;
+      }
       urls.add(f.fileName);
     }
 
@@ -123,11 +117,9 @@ export default class StackFrameConverter {
       console.log(`>>> Will processStack=${s}`);
       if (!rawStacks.has(s)) {
         let frames = ErrorStackParser.parse(<any>{ stack: s });
-        console.log(`>>> frames=${frames}`);
         frames = frames.filter(frameFilter);
         frames.forEach(processFrame);
         rawStacks.set(s, frames);
-        console.log(`>>> rawStacks=${rawStacks}`);
       }
     }
 
@@ -137,16 +129,21 @@ export default class StackFrameConverter {
       console.log(`Processing stack ${id}: stringId=${stringId}`);
       traces[id].forEach(processStack);
     });
+
     // Step 2: Get files, parse source maps.
-    // urls.forEach((url) => {
-    //   this._fetchMap(proxy, url);
-    // });
+    urls.forEach((url) => {
+      console.log(`Getting source map for ${url}`);
+      this._getSourceMap(url);
+    });
+    console.log(`>>> after getSourceMap _maps=${JSON.stringify(this._maps.get("./test_apps/app_1.js"), null, 2)}`);
+
     // Step 3: Convert stacks.
     const convertedStacks = new Map<string, IStack>();
     rawStacks.forEach((stack, k) => {
       convertedStacks.set(k, this._convertStack(stack));
     });
-    console.log(`Converted stacks=${JSON.stringify(convertedStacks, null, 2)}`);
+    // console.log(`Converted stacks=${JSON.stringify(convertedStacks, null, 2)}`);
+
     // Step 4: Map stacks back into the return object.
     function mapStack(s: string): IStack {
       return convertedStacks.get(s);
@@ -157,17 +154,17 @@ export default class StackFrameConverter {
       rv[id] = traces[id].map(mapStack);
     });
 
-    console.log(`Returning stacks=${JSON.stringify(rv, null, 2)}`);
+    // console.log(`Returning stacks=${JSON.stringify(rv, null, 2)}`);
     return rv;
   }
 
   private _convertStack(stack: StackFrame[]): IStack {
-    console.log(`in _convertStack=${JSON.stringify(stack, null, 2)}`);
+    // console.log(`in _convertStack=${JSON.stringify(stack, null, 2)}`);
     return stack.map((frame) => this._convertStackFrame(frame));
   }
 
   private _convertStackFrame(frame: StackFrame): number {
-    console.log(`in _convertStackFrame=${JSON.stringify(frame, null, 2)}`);
+    console.log(`in _convertStackFrame, fileName=${frame.fileName}`);
     const map = this._maps.get(frame.fileName);
     if (!map) {
       return this._results.addStackFrameFromObject(frame);
