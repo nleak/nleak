@@ -6,6 +6,7 @@ import fs from "node:fs";
 
 const rewrittenFilePath = "/tmp/nleak_rewritten.js";
 const magicString = "//# sourceMappingURL=data:application/json;base64,";
+const HACKING_URL_HOST = "http://nleak.js.org/"; // TODO: remove URL in nleak-viewer and use file path instead, then remove this
 
 /**
  * Converts stack frames to get the position in the original source document.
@@ -32,12 +33,7 @@ export default class StackFrameConverter {
     traces: GrowingStackTraces,
   ): { [id: number]: IStack[] } {
     console.log(`Converting stacks... pageUrl=${pageUrl}`);
-    return new StackFrameConverter(results).convertGrowthStacks(
-      // {}, // TODO: to be removed
-      // pageUrl,
-      traces,
-      // "foo" // TODO: to be removed
-    );
+    return new StackFrameConverter(results).convertGrowthStacks(traces);
   }
 
   constructor(private _results: BLeakResults) {}
@@ -50,8 +46,10 @@ export default class StackFrameConverter {
     let map = this._maps.get(url);
     if (!map) {
       try {
-        // const stashedItem = proxy.getFromStash(url);
-        // const source = stashedItem.data.toString();
+        // NOTE from NLeak dev:
+        // currently only support the single rewritten file source map
+        // if there is a need to support multiple source maps, we need to change the logic here
+        // to read multiple source maps files from the file system
         const source = fs.readFileSync(rewrittenFilePath).toString();
         let sourceMapOffset = source.lastIndexOf(magicString);
         if (sourceMapOffset > -1) {
@@ -89,12 +87,7 @@ export default class StackFrameConverter {
     }
   }
 
-  public convertGrowthStacks(
-    // proxy: any,
-    // pageUrl: string,
-    traces: GrowingStackTraces,
-    // agentUrl: string
-  ): { [id: number]: IStack[] } {
+  public convertGrowthStacks(traces: GrowingStackTraces): { [id: number]: IStack[] } {
     // First pass: Get all unique URLs and their source maps.
     const urls = new Set<string>();
     const rawStacks = new Map<string, StackFrame[]>();
@@ -114,10 +107,9 @@ export default class StackFrameConverter {
     }
 
     function processFrame(f: StackFrame) {
-      // NOTE: NLeak doesn't have http or https in the url
-      // if (f.fileName && !f.fileName.toLowerCase().startsWith("http")) {
-      //   f.fileName = resolveURL(pageUrl, f.fileName);
-      // }
+      if (f.fileName && !f.fileName.toLowerCase().startsWith("http")) { // TODO: remove enforce URL after nleak-viewer is updated
+        f.fileName = HACKING_URL_HOST + f.fileName;
+      }
       urls.add(f.fileName);
     }
 
@@ -125,11 +117,9 @@ export default class StackFrameConverter {
       console.log(`>>> Will processStack=${s}`);
       if (!rawStacks.has(s)) {
         let frames = ErrorStackParser.parse(<any>{ stack: s });
-        console.log(`>>> frames=${frames}`);
         frames = frames.filter(frameFilter);
         frames.forEach(processFrame);
         rawStacks.set(s, frames);
-        console.log(`>>> rawStacks=${rawStacks}`);
       }
     }
 
@@ -139,6 +129,7 @@ export default class StackFrameConverter {
       console.log(`Processing stack ${id}: stringId=${stringId}`);
       traces[id].forEach(processStack);
     });
+
     // Step 2: Get files, parse source maps.
     urls.forEach((url) => {
       console.log(`Getting source map for ${url}`);
@@ -152,6 +143,7 @@ export default class StackFrameConverter {
       convertedStacks.set(k, this._convertStack(stack));
     });
     // console.log(`Converted stacks=${JSON.stringify(convertedStacks, null, 2)}`);
+
     // Step 4: Map stacks back into the return object.
     function mapStack(s: string): IStack {
       return convertedStacks.get(s);
