@@ -25,7 +25,7 @@ Module.prototype.require = function(){
 
     // rewriting starts here
     const rewritten = exposeClosureState("guest_app_rewritten.js", srcStr);
-    fs.writeFile("/tmp/nleak_rewritten.js", rewritten, function (err) {
+    fs.writeFile("/tmp/nleak_rewritten.js", rewritten, function (err) { // write to tmp file for result source mapping
       if (err) return console.log(err);
       console.log(
         "[DEBUG] saved rewritten guest app to guest_app_rewritten.log"
