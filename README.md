@@ -39,3 +39,7 @@ Docker is used as CI building environment and testing.
 $ docker build . -t nleak_build --platform=linux/amd64
 $ docker run -v <path on host>:/home/NLeak --platform=linux/amd64 -it nleak_build:latest
 ```
+
+### NLeak result preview
+
+<img width="1575" alt="Screen Shot 2022-11-27 at 1 45 27 PM" src="https://user-images.githubusercontent.com/5697641/204161283-ca1ed0b5-3cd3-402e-be1a-4b5532cf86dd.png">
