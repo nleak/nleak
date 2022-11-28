@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
-const {DB_USER,DB_PASS} = require('./credentials');
+const {DBUSER,DBPASS} = require('./credentials');
 
-const url = `mongodb+srv://${DB_USER:DB_PASS}@cluster67369.udoxxke.mongodb.net/?appName=mongosh+1.6.0`
+const url = `mongodb+srv://${DBUSER}:${DBPASS}@cluster67369.udoxxke.mongodb.net/?appName=mongosh+1.6.0`
 
 const client = global.client = new MongoClient(url);
 
