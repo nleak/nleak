@@ -1000,7 +1000,7 @@ declare function importScripts(s: string): void;
 
   function $$$GET_STACK_TRACES$$$(): GrowingStackTraces {
     const stacksMap: { [id: number]: Set<string> } = {};
-    console.log("$$$GET_STACK_TRACES$$$, instrumentedTrees", instrumentedTrees);
+    // console.log("$$$GET_STACK_TRACES$$$, instrumentedTrees", instrumentedTrees);
     for (const tree of instrumentedTrees) {
       if (isDOMRoot(tree)) {
         getDOMStackTraces(ROOT.$$$GLOBAL$$$, tree, stacksMap);
