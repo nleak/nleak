@@ -318,7 +318,6 @@ export class HeapGrowthTracker {
     log: Log
   ): Promise<void> {
     const heap = await HeapGraph.Construct(parser, log, this._stringMap);
-    console.log("heap", heap)
     const growthStatus = new TwoBitArray(heap.nodeCount);
     if (this._heap !== null) {
       log.timeEvent(OperationType.PROPAGATE_GROWTH, () => {
