@@ -1,1 +1,1 @@
-module.exports = {DBUSER:"",DBPASS:""}
+module.exports = {DBUSER:"Cluster67369",DBPASS:"b2l3Q0xcWldt",DBNAME:"sample_training"}
