@@ -83,7 +83,7 @@ server.listen(port, hostname, () => {
 });
 
 server.on('close', () => {
-  client.close()
+  client.close();
 });
 
 module.exports = server;
