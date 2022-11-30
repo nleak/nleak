@@ -7,7 +7,7 @@ const exposeClosureState = require("./rewriting/closure_state_transform").expose
 
 // Before transforming the guest app, we need to require the global agent functions
 // for code instrumentation.
-require("./rewriting/nleak_agent.js");
+global.agent = require("./rewriting/nleak_agent.js");
 
 // Modify the require function to rewrite the guest app
 Module.prototype.require = function(){
@@ -43,6 +43,7 @@ Module.prototype.require = function(){
 
 // test instrumental function works on guest app
 $$$AGENT_PRINT$$$("agent $$$ function ready for code instrumentation");
+console.log("agent $$$GLOBAL$$$", $$$GLOBAL$$$);
 
 // rewrite and run the guest app.
-require('./test_apps/app_1.js');
+global.__nleak__ = require('./test_apps/app_1.js');

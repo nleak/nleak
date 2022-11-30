@@ -6,6 +6,7 @@ type Element = any;
 const document = global;
 const window = global;
 const self = global;
+const ROOT = global as any;
 
 interface Object {
   $$$PROXY$$$?: any;
@@ -87,9 +88,6 @@ declare function importScripts(s: string): void;
  * Agent injected into the webpage to surface browser-hidden leaks at the JS level.
  */
 (function() {
-  // Global variables.
-  const ROOT = global as any;
-
   // Avoid installing self twice.
   if (ROOT.$$$INSTRUMENT_PATHS$$$) {
     return;
@@ -412,10 +410,10 @@ declare function importScripts(s: string): void;
       if (props.hasOwnProperty(propName)) {
         const prop = props[propName];
         if (prop.get) {
-          $$$FUNCTION_EXPRESSION$$$(prop.get, scope);
+          $$$FUNCTION_EXPRESSION$$$(prop.get as any, scope);
         }
         if (prop.set) {
-          $$$FUNCTION_EXPRESSION$$$(prop.set, scope);
+          $$$FUNCTION_EXPRESSION$$$(prop.set as any, scope);
         }
       }
     }
@@ -1861,3 +1859,5 @@ declare function importScripts(s: string): void;
   //   }
   // }
 })();
+
+export default ROOT;
