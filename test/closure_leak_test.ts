@@ -7,6 +7,7 @@ import NopProgressBar from '../core/nop_progress_bar';
 import NopLog from '../core/common/nop_log';
 import fs from "fs";
 import { join } from 'path';
+import { IPath } from 'common/interfaces';
 
 const DEBUG = false;
 const guest_app_file_name = 'guest_app_closure_test_leak.js';
@@ -16,20 +17,20 @@ const closure_leak_test =
 const http = require('http');
 const hostname = '127.0.0.1';
 const port = 2333;
+global.LEAKOBJ = {};
 function leaking() {
-  var obj = {};
   var power = 2;
   return {
     createLeak: function() {
       var top = Math.pow(2, power);
       power++;
       for (var j = 0; j < top; j++) {
-          obj[Math.random()] = Math.random();
+        LEAKOBJ[Math.random()] = Math.random();
       }
       console.log("memory leaking...");
     },
     cleanLeak: function() {
-      obj.clear();
+      LEAKOBJ.clear();
     }
   };
 }
@@ -105,6 +106,12 @@ describe('Closure Leak test', function () {
       `, new NopProgressBar(), driver, (results) => { }
       );
       assertEqual(result.leaks.length >= expected_leak, true);
+      let obj: IPath = (result.leaks[0].paths[0]);
+      const leak_obj_name = 'LEAKOBJ';
+      const leak_obj_retained_size = 336;
+      assertEqual((obj[0].indexOrName), leak_obj_name);
+      assertEqual(result.leaks[0].scores.retainedSize, leak_obj_retained_size);
+
       console.log("result size : ", result.leaks.length)
       result.leaks.forEach((leak) => {
         console.log(leak.id);
