@@ -5,7 +5,7 @@ const port = 2333;
 
 //add callable methods by other script aka wrapper.js
 
-global.LEAKOBJ = {};
+const LEAKOBJ = {};
 var power = 2;
 function leaking() {
     var top = Math.pow(2, power);
@@ -36,3 +36,7 @@ const server = http.createServer((req, res) => {
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/, with API /leak`);
 });
+
+module.exports = {
+  LEAKOBJ
+};
