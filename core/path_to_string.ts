@@ -168,14 +168,16 @@ export default function pathToString(p: IPath): string {
   const segment = PS.peek();
   if (!segment) {
     // Empty path -- window object is growing.
-    return "window";
+    // return "window";
+    return "global";
   }
   if (segment.type === PathSegmentType.DOM_TREE) {
     PS.print("document");
     PS.advance();
     prettyPrintDOMPath();
   } else {
-    PS.print("window");
+    // PS.print("window");
+    PS.print("global");
     prettyPrintNonDOMPath();
   }
   return PS.flush();

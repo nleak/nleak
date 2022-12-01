@@ -25,6 +25,6 @@ exports.loop = [
   }
 ];
 exports.timeout = 30000;
-exports.iterations = 3;
+exports.iterations = 2;
 exports.postCheckSleep = 500;
 
