@@ -1,6 +1,10 @@
 # Guest Folder Docs
 
-Overview of project files.
+## Core & Guest NodeJS process interaction diagram
+
+![image](https://user-images.githubusercontent.com/5697641/205152370-db485fa1-8466-4c01-9c8b-5f77406eeb50.png)
+
+## Overview of project files.
 
 <!-- ## Description
 
