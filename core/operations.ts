@@ -12,7 +12,7 @@ import HeapSnapshotParser from "./heap_snapshot_parser";
 // import {InterceptorConfig, default as getInterceptor} from './mitmproxy_interceptor';
 import BLeakResults from "./results";
 import { HeapGrowthTracker, HeapGraph, toPathTree } from "./growth_graph";
-// import StackFrameConverter from './stack_frame_converter';
+import StackFrameConverter from './stack_frame_converter';
 import PathToString from "./path_to_string";
 import NopLog from "./common/nop_log";
 
@@ -464,15 +464,13 @@ class GetGrowthStacksOperation extends Operation {
         const traces = await opSt.nodeDriver.runCode<GrowingStackTraces>(
           `$$$GET_STACK_TRACES$$$()`
         );
-        console.log("[DEBUG] traces: ", traces);
-        // TODO: port growthStacks to NodeJS
-        // const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.nodeDriver.mitmProxy, opSt.config.url, opSt.results, traces);
+        const growthStacks = StackFrameConverter.ConvertGrowthStacks(opSt.config.url, opSt.results, traces);
         opSt.results.leaks.forEach((lr) => {
           const index = lr.id;
-          // const stacks = growthStacks[index] || [];
-          // stacks.forEach((s) => {
-          //   lr.addStackTrace(s);
-          // });
+          const stacks = growthStacks[index] || [];
+          stacks.forEach((s) => {
+            lr.addStackTrace(s);
+          });
         });
       }
     );

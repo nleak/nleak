@@ -6,16 +6,12 @@ const port = 2333;
 //add callable methods by other script aka wrapper.js
 
 global.LEAKOBJ = {};
-global.LEAKOBJ2 = LEAKOBJ;
-var power = 8;
+var power = 2;
 function leaking() {
     var top = Math.pow(2, power);
     power++;
     for (var j = 0; j < top; j++) {
-      if (global.LEAKOBJ === global.LEAKOBJ2) {
-        var target = Math.random() > 0.5 ? global.LEAKOBJ : global.LEAKOBJ2;
-        target[Math.random()] = Math.random();
-      }
+      LEAKOBJ[Math.random()] = Math.random();
     }
 }
 
