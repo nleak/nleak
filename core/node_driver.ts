@@ -165,7 +165,7 @@ export default class NodeDriver implements IDriver {
       console.log("exceptionDetails: ", e.exceptionDetails);
       return Promise.reject(exceptionDetailsToString(e.exceptionDetails));
     }
-    console.log("e.result.value: ", e.result.value);
+    // console.log("e.result.value: ", e.result.value);
     return e.result.value;
   }
 
