@@ -22,8 +22,9 @@ An automatical memory detection and diagnosis tool for NodeJS.
 
 <img width="750" alt="Slice 1" src="https://user-images.githubusercontent.com/5697641/205152647-1869cd8e-6618-4307-be2a-1b39f119202c.png">
 
-### Local Development
+## Development
 
+### Local Development
 - `npm i`
 - `npm run dev`
 
@@ -40,6 +41,21 @@ $ docker build . -t nleak_build --platform=linux/amd64
 $ docker run -v <path on host>:/home/NLeak --platform=linux/amd64 -it nleak_build:latest
 ```
 
-### NLeak result preview
+## How to use NLeak
 
-<img width="1575" alt="Screen Shot 2022-11-27 at 1 45 27 PM" src="https://user-images.githubusercontent.com/5697641/204161283-ca1ed0b5-3cd3-402e-be1a-4b5532cf86dd.png">
+### Phase 1: Memory Leak Detection
+
+### Phase 2: Memory Leak Diagnosis
+
+### Phase 3: Result Reporting
+
+NLeak viewer is a tool built in reactjs that allows you to visualize the heap snapshot growth of your application. To use it, simply go to https://nleak-viewer.vercel.app/ and upload your nleak_result.json file.
+
+Once you've uploaded the file, NLeak viewer will generate a chart showing the growth of your heap snapshots over time. You'll also see a summary of the last heap snapshot's size, as well as the leak location with source map.
+
+By using NLeak with the viewer, you can easily identify potential memory leaks in your application and take steps to fix them.
+
+<img width="1783" alt="Screen Shot 2022-12-04 at 11 32 36 AM" src="https://user-images.githubusercontent.com/5697641/205511402-d2bd3457-5b62-4085-84b4-9f4a486d1dcf.png">
+
+## Acknowledgement
+
