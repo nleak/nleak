@@ -3,6 +3,9 @@
   "description": "Automatical memory detection and diagnosis tool for NodeJS.",
   "version": "0.1.0",
   "main": "index.js",
+  "bin": {
+    "nleak": "./build/core/cli/nleak.js"
+  },
   "scripts": {
     "dev": "nodemon",
     "test:driver": "npx tsc && cd build/core/cli && node nleak.js run --config ../../guest/config.js --out ../../ --guest-app-entry ../../guest/wrapper.js",
