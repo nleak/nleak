@@ -2,6 +2,9 @@
 
 [![n-leak CI](https://github.com/nleak/n-leak/actions/workflows/n-leak.js.yml/badge.svg)](https://github.com/nleak/n-leak/actions/workflows/n-leak.js.yml)
 
+> **Warning**
+> NLeak is currently under development and is not ready for production use.
+
 NLeak is an automatical memory detection and diagnosis tool for NodeJS. It is built on top of BLeak [1], a memory leak detection tool for JavaScript applications. NLeak is designed to be a lightweight and extensible tool that can be easily integrated into existing CI/CD pipelines. NLeak is currently under development and is not ready for production use.
 
 ## Background
