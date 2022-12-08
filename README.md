@@ -24,6 +24,7 @@ Then, you will need the config file to tell NLeak how to run your application. T
 Once you have the files prepared, you can run NLeak on your application by simply running the following command:
 
 ```
+// go to ./example folder
 nleak run --config ./config.js --guest-app-entry ./app.js --out ./
 ```
 
