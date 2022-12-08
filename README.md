@@ -11,6 +11,24 @@ NLeak is an automatical memory detection and diagnosis tool for NodeJS. It is bu
 
 Memory leaks are a common cause of system memory exhaustion, which can result in slow performance or system crashes. Identifying and fixing memory leaks in JavaScript can be particularly challenging, as the language is dynamically typed and leaks may differ from those in other languages such as C, C++, and Java. There are currently no automated tools that can effectively detect memory leaks in JavaScript applications executed in the NodeJS runtime environment. The team is working on extending BLeak to NodeJS in order to create a memory detection tool that can automate the process of locating, diagnosing, and ranking JavaScript memory leaks in Node.js applications.
 
+## How to use it?
+
+You can simply install NLeak globally and run it on your NodeJS application.
+
+```
+npm install -g nleak
+```
+
+Then, you will need the config file to tell NLeak how to run your application. The config file should be named `config.js` and should be in the root directory of your application. Please refer to the `example` folder for an example config file and guest NodeJS application with memory leak.
+
+Once you have the files prepared, you can run NLeak on your application by simply running the following command:
+
+```
+nleak run --config ./config.js --guest-app-entry ./app.js --out ./
+```
+
+As a result, you will get a `nleak_result.json` file in the current directory. This file contains the memory leak detection result. You can also use the NLeak viewer to visualize the result.
+
 ## System Overview
 
 <img width="650" alt="Slice 1" src="https://user-images.githubusercontent.com/5697641/205152647-1869cd8e-6618-4307-be2a-1b39f119202c.png">
