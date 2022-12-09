@@ -45,4 +45,7 @@ Module.prototype.require = function(){
 $$$AGENT_PRINT$$$("agent $$$ function ready for code instrumentation");
 
 // rewrite and run the guest app.
-require('./test_apps/app_1.js');
+const imported_module = require('./test_apps/app_1.js');
+for (var key in imported_module) {
+    global[key] = imported_module[key];
+}
