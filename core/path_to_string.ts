@@ -175,7 +175,8 @@ export default function pathToString(p: IPath): string {
     PS.advance();
     prettyPrintDOMPath();
   } else {
-    PS.print("window");
+    // Nodejs
+    PS.print("global");
     prettyPrintNonDOMPath();
   }
   return PS.flush();
